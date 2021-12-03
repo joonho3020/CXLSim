@@ -27,75 +27,57 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /**********************************************************************************************
- * File         : pcie_rc.h
+ * File         : core.h
  * Author       : Joonho
- * Date         : 10/10/2021
- * SVN          : $Id: pcie_rc.h 867 2009-11-05 02:28:12Z kacear $:
- * Description  : PCIe root complex
+ * Date         : 12/3/2021
+ * SVN          : $Id: core.cc 867 2009-11-05 02:28:12Z kacear $:
+ * Description  : core for callback test
  *********************************************************************************************/
 
-#ifndef PCIE_RC_H
-#define PCIE_RC_H
+#ifndef CORE_H
+#define CORE_H
 
 #include <list>
+#include <string>
+#include <fstream>
 
-#include "pcie_endpoint.h"
+#include "global_types.h"
 #include "global_defs.h"
 
 namespace CXL {
 
-class pcie_rc_c : public pcie_ep_c 
-{
+typedef struct core_req_s {
+  core_req_s();
+  core_req_s(Addr addr, bool write);
+  void init();
+
+  Addr m_addr;
+  bool m_write;
+} core_req_s;
+
+class core {
 public:
-  /**
-   * Constructor
-   */
-  pcie_rc_c(cxlsim_c* simBase);
-  
-  /**
-   * Destructor
-   */
-  ~pcie_rc_c();
+  core(cxlsim_c* simBase);
+  ~core();
 
-  /**
-   * Tick a cycles
-   */
-  void run_a_cycle(bool pll_lock);
-
-  /**
-   * Insert pcie request into pending queue
-   */
-  void insert_request(cxl_req_s* req);
-
-  bool rootcomplex_full();
-
-  /**
-   * Pop a finished pcie request
-   */
-  cxl_req_s* pop_request();
-
-  /**
-   * Print for debugging
-   */
-  void print_rc_info();
+  void set_tracefile(std::string filename);
+  void insert_request(Addr addr, bool write);
+  void run_a_cycle(bool pll_locked);
+  void run_sim();
 
 private:
-  /**
-   * Start PCIe transaction by inserting requests
-   */
-  void start_transaction() override;
+  void core_callback(Addr addr, bool write, void *req);
 
-  /**
-   * End PCIe transaction by pulling requests
-   */
-  void end_transaction() override;
+public:
+  Counter m_insert_reqs;
+  Counter m_return_reqs;
+  cxlsim_c* m_simBase;
 
 private:
-  int m_pending_size;
-  std::list<cxl_req_s*> m_pending_req; /**< requests pending */
-  std::list<cxl_req_s*> m_done_req;    /**< requests finished */
+  std::string m_tracefilename;
+  std::list<core_req_s*> m_pending_q;
 };
 
-}
+} //namespace CXL
 
-#endif // PCIE_RC_H
+#endif //CORE_H

@@ -4,12 +4,13 @@ SET(SOURCES
   cxl_t3.cc
   cxlsim.cc
   knob.cc
-  main.cc
   packet_info.cc
   pcie_endpoint.cc
   pcie_rc.cc
   ramulator_wrapper.cc
   statistics.cc
+  main.cc
+  core.cc
 )
 
 SET(RAMULATOR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ramulator)

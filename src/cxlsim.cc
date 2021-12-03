@@ -45,18 +45,25 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace CXL {
 
+///////////////////////////////////////////////////////////////////////////////
+// public
+///////////////////////////////////////////////////////////////////////////////
+
 cxlsim_c::cxlsim_c() {
   // simulation related
   m_cycle = 0;
 
   // memory pool for packets
+  m_req_pool = new pool_c<cxl_req_s>;
   m_msg_pool = new pool_c<message_s>;
   m_flit_pool = new pool_c<flit_s>;
+  m_trans_done_cb = NULL;
 }
 
 cxlsim_c::~cxlsim_c() {
   delete m_rc;
   delete m_cme;
+  delete m_req_pool;
   delete m_msg_pool;
   delete m_flit_pool;
 }
@@ -90,10 +97,24 @@ void cxlsim_c::init_sim() {
   m_cme->init(1, false, m_msg_pool, m_flit_pool, m_rc);
 }
 
+void cxlsim_c::register_callback(callback_t* fn) {
+  m_trans_done_cb = fn;
+}
+
 // FIXME : add queue here
-bool cxlsim_c::push_req(cxl_req_s* req) {
-  m_rc->insert_request(req);
-  return true;
+// & acquire entry from pool
+bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
+  if (m_rc->rootcomplex_full()) {
+    return false;
+  } else {
+    cxl_req_s* new_req = m_req_pool->acquire_entry(this);
+    new_req->m_addr = addr;
+    new_req->m_write = write;
+    new_req->m_req = req;
+
+    m_rc->insert_request(new_req);
+    return true;
+  }
 }
 
 void cxlsim_c::run_a_cycle(bool pll_locked) {
@@ -101,6 +122,16 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   // FIXME : different clock ratio
   m_cme->run_a_cycle_internal(pll_locked);
   m_rc->run_a_cycle(pll_locked);
+
+  while (1) {
+    cxl_req_s* finished_req = m_rc->pop_request();
+    if (finished_req == NULL) { // no finished request
+      break;
+    } else { // call the callback function & return to req pool
+      request_done(finished_req);
+    }
+  }
+
   m_cycle++;
 
   if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
@@ -110,6 +141,16 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
     m_cme->print_cxlt3_info();
     m_rc->print_rc_info();
   }
+}
+
+// FIXME : release cxl_req_s from pool
+void cxlsim_c::request_done(cxl_req_s* req) {
+  if (m_trans_done_cb) {
+    (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
+  }
+
+  req->init();
+  m_req_pool->release_entry(req);
 }
 
 } // namespace CXL

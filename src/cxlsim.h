@@ -40,10 +40,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <map>
 
+#include "Callback.h"
 #include "global_defs.h"
 #include "global_types.h"
 
 namespace CXL {
+
+typedef CallbackBase<void, Addr, bool, void*> callback_t;
 
 class cxlsim_c {
 public:
@@ -64,12 +67,16 @@ public:
    */
   void init_sim();
 
-  bool push_req(cxl_req_s* req);
+  void register_callback(callback_t* fn);
+
+  bool insert_request(Addr addr, bool write, void *req);
 
   /**
    * Tick a cycle
    */
   void run_a_cycle(bool pll_locked);
+
+  void request_done(cxl_req_s* req);
 
 public:
   pcie_rc_c* m_rc;
@@ -86,8 +93,10 @@ public:
   CoreStatistics* m_coreStatsTemplate;
 
 private:
+  pool_c<cxl_req_s>* m_req_pool;
   pool_c<message_s>* m_msg_pool;
   pool_c<flit_s>* m_flit_pool;
+  callback_t* m_trans_done_cb;
 };
 
 }

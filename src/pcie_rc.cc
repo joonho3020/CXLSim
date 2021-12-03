@@ -34,22 +34,21 @@ POSSIBILITY OF SUCH DAMAGE.
  * Description  : PCIe root complex
  *********************************************************************************************/
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 
+#include "all_knobs.h"
 #include "pcie_rc.h"
 
 namespace CXL {
 
 pcie_rc_c::pcie_rc_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase) {
-  m_pending_req = new std::list<cxl_req_s*>();
-  m_done_req = new std::list<cxl_req_s*>();
+  m_pending_size = *KNOB(KNOB_PCIE_INSERTQ_SIZE);
 }
 
 pcie_rc_c::~pcie_rc_c() {
-  delete m_pending_req;
-  delete m_done_req;
 }
 
 void pcie_rc_c::run_a_cycle(bool pll_locked) {
@@ -71,7 +70,7 @@ void pcie_rc_c::run_a_cycle(bool pll_locked) {
 void pcie_rc_c::start_transaction() {
   std::vector<cxl_req_s*> tmp_list;
 
-  for (auto iter = m_pending_req->begin(); iter != m_pending_req->end(); 
+  for (auto iter = m_pending_req.begin(); iter != m_pending_req.end(); 
       ++iter) {
     cxl_req_s* req = *iter;
     if(push_txvc(req)) {
@@ -82,7 +81,7 @@ void pcie_rc_c::start_transaction() {
   }
 
   for (auto iter = tmp_list.begin(), end = tmp_list.end(); iter != end; ++iter) {
-    m_pending_req->remove(*iter);
+    m_pending_req.remove(*iter);
   }
 }
 
@@ -92,21 +91,29 @@ void pcie_rc_c::end_transaction() {
     if (!req) {
       break;
     } else {
-      m_done_req->push_back(req);
+      m_done_req.push_back(req);
     }
   }
 }
 
 void pcie_rc_c::insert_request(cxl_req_s* req) {
-  m_pending_req->push_back(req);
+  assert((int)m_pending_req.size() < m_pending_size);
+  m_pending_req.push_back(req);
+}
+
+bool pcie_rc_c::rootcomplex_full() {
+  if ((int)m_pending_req.size() >= m_pending_size)
+    return true;
+  else
+    return false;
 }
 
 cxl_req_s* pcie_rc_c::pop_request() {
-  if (m_done_req->empty()) {
+  if (m_done_req.empty()) {
     return NULL;
   } else {
-    cxl_req_s* req = m_done_req->front();
-    m_done_req->pop_front();
+    cxl_req_s* req = m_done_req.front();
+    m_done_req.pop_front();
     return req;
   }
 }
@@ -116,12 +123,12 @@ void pcie_rc_c::print_rc_info() {
   print_ep_info();
 
   std::cout << "pending q" << ": ";
-  for (auto req : *m_pending_req) {
+  for (auto req : m_pending_req) {
     std::cout << std::hex << req->m_addr << " ; ";
   }
 
   std::cout << "done q" << ": ";
-  for (auto req : *m_done_req) {
+  for (auto req : m_done_req) {
     std::cout << std::hex << req->m_addr << " ; ";
   }
   std::cout << std::endl;
