@@ -1,4 +1,10 @@
 src/tags
+tags
+src/all_knobs.cc
+src/all_knobs.h
+src/all_stats.cc
+src/all_stats.h
+src/statsEnum.h
 build
 bin/cxlsim
 .ccls-cache

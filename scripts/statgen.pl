@@ -209,9 +209,10 @@ close (ALLSTATS);
 	foreach $defLine (@coreStatsEnum) {print ENUMDEF $defLine;}
 	
 	print ENUMDEF "\tStatisticsEnumEnd\n};\n";
-	print ENUMDEF "#endif //StatsEnums_Included\n";
 
   print ENUMDEF "} // namespace CXL \n\n";
+	print ENUMDEF "#endif //StatsEnums_Included\n";
+
 	
 	close(ENUMDEF);
 

@@ -1,6 +1,22 @@
 
 # CXL Standalone simulator
 
+# Quick Start
+```
+git clone <url>
+git submodule init
+git submodule update
+cd scripts
+./statgen.pl
+./knobgen.pl
+cd ..
+mkdir build
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=../bin
+make -j <cores>
+make install
+```
+
 
 # TODO
 - add simbase
