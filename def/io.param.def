@@ -1,0 +1,80 @@
+/*
+Copyright (c) <2012>, <Georgia Institute of Technology> All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted 
+provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions 
+and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this list of 
+conditions and the following disclaimer in the documentation and/or other materials provided 
+with the distribution.
+
+Neither the name of the <Georgia Institue of Technology> nor the names of its contributors 
+may be used to endorse or promote products derived from this software without specific prior 
+written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/* General IO */
+param<CLOCK_IO, clock_io, float, 0.8>
+
+/* CME */
+param<CME_ENABLE, cme_enable, bool, false>
+param<CME_RANGE, cme_addr_min, uint64_t, 0>
+param<CME_LATENCY, cme_latency, long, 300>
+
+/* PCIe */
+param<PCIE_LANES, pcie_lanes, int, 8>
+param<PCIE_PER_LANE_BW, pcie_per_lane_bw, float, 32>
+
+param<PCIE_VC_CNT, pcie_vc_cnt, int, 2>
+param<PCIE_TXVC_CAPACITY, pcie_txvc_capacity, int, 8>
+param<PCIE_RXVC_CAPACITY, pcie_rxvc_capacity, int, 8>
+
+param<PCIE_TXDLL_CAPACITY, pcie_txdll_capacity, int, 8>
+
+param<PCIE_PHYS_CAPACITY, pcie_phys_capacity, int, 8>
+param<PCIE_TXREPLAY_CAPACITY, pcie_txreplay_capacity, int, 8>
+
+/* Latency related */
+param<PCIE_TXTRANS_LATENCY, pcie_txtrans_latency, uint64_t, 5>
+param<PCIE_TXDLL_LATENCY, pcie_txdll_latency, uint64_t, 5>
+param<PCIE_RXTRANS_LATENCY, pcie_rxtrans_latency, uint64_t, 5>
+param<PCIE_RXDLL_LATENCY, pcie_rxdll_latency, uint64_t, 5>
+param<PCIE_ARBMUX_LATENCY, pcie_arbmux_latency, uint64_t, 2>
+
+/* Flit related */
+param<PCIE_MAX_MSG_PER_FLIT, pcie_max_msg_per_flit, int, 4>
+param<PCIE_FLIT_BITS, pcie_flit_bits, int, 544>
+param<PCIE_DATA_SLOTS_PER_FLIT, pcie_data_slots_per_flit, int, 4>
+
+/* Message related */
+param<PCIE_DATA_MSG_BITS, pcie_data_msg_bits, int, 128>
+param<PCIE_REQ_MSG_BITS, pcie_req_msg_bits, int, 87>
+param<PCIE_RWD_MSG_BITS, pcie_rwd_msg_bits, int, 87>
+param<PCIE_NDR_MSG_BITS, pcie_ndr_msg_bits, int, 30>
+param<PCIE_DRS_MSG_BITS, pcie_drs_msg_bits, int, 40>
+
+/* Output dir */
+param<STATISTICS_OUT_DIRECTORY, out, std::string, .>
+
+/* Debug flags */
+param<DEBUG_IO_SYS, debug_io_sys, int, 0>
+
+/* Ramulator configs */
+param<RAMULATOR_CONFIG_FILE, ramulator_config_file, std::string, DDR4-config.cfg>
+param<RAMULATOR_CACHELINE_SIZE, ramulator_cacheline_size, int, 64>
+
+/* Simulation configs */
+param<NUM_SIM_CORES, num_sim_cores, int, 1>

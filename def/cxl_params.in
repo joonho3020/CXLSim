@@ -1,0 +1,43 @@
+
+# Simulation Configuration
+num_sim_cores 4
+
+# Clock
+clock_io 1.6
+
+# CXL
+cme_enable 1
+cme_addr_min 0
+
+# PCIe
+# BW related
+pcie_lanes 16
+pcie_per_lane_bw 32
+
+# Don't touch
+pcie_vc_cnt 2
+
+# Capacity params
+pcie_txvc_capacity 8
+pcie_rxvc_capacity 8
+pcie_txdll_capacity 8
+pcie_phys_capacity 8
+pcie_txreplay_capacity 8
+
+# Latency params
+pcie_txtrans_latency 5
+pcie_txdll_latency 5
+pcie_rxtrans_latency 5
+pcie_rxdll_latency 5
+pcie_arbmux_latency 2
+
+# Don't touch
+pcie_max_msg_per_flit 4
+pcie_flit_bits 528
+pcie_data_slots_per_flit 4
+
+# DEBUG
+debug_io_sys 0
+
+# OUTPUT Redirect
+out ../stats

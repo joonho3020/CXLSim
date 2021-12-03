@@ -1,0 +1,4 @@
+src/tags
+build
+bin/cxlsim
+.ccls-cache
