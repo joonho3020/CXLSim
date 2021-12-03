@@ -37,7 +37,8 @@ pcie_flit_bits 528
 pcie_data_slots_per_flit 4
 
 # DEBUG
-debug_io_sys 1
+debug_io_sys 0
+debug_callback 1
 
 
 # OUTPUT Redirect

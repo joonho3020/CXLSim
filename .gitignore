@@ -8,3 +8,5 @@ src/statsEnums.h
 build
 bin/cxlsim
 .ccls-cache
+**/*.swp
+bin/*.out
