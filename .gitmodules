@@ -1,0 +1,3 @@
+[submodule "src/ramulator"]
+	path = src/ramulator
+	url = https://github.com/snu-comparch/ramulator.git
