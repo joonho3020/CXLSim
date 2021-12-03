@@ -1,5 +1,5 @@
 
-# CXL Standalone simulator
+# CXL Standalone Simulator
 
 # Quick Start
 ```
