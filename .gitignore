@@ -11,3 +11,4 @@ bin/.gdb_history
 bin/*.out
 .ccls-cache
 **/*.swp
+stats
