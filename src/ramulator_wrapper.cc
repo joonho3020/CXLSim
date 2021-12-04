@@ -1,3 +1,5 @@
+// Ported from macsim
+
 #ifdef RAMULATOR
 
 #include <map>

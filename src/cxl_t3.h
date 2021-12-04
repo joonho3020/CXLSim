@@ -114,11 +114,13 @@ private:
   void writeComplete(ramulator::Request &ramu_req);
 
 private:
+  // mxp queues
   unsigned int m_mxp_requestsInFlight;
   std::map<long, std::list<cxl_req_s*>> m_mxp_reads;
   std::map<long, std::list<cxl_req_s*>> m_mxp_writes;
   std::list<cxl_req_s*> m_mxp_resp_queue;
 
+  // members for ramulator
   ramulator::Config configs;
   ramulator::CXLRamulatorWrapper *m_ramu_wrapper;
   std::function<void(ramulator::Request &)> m_read_cb_func;

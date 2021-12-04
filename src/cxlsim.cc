@@ -30,8 +30,8 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : cxlsim.cc
  * Author       : Joonho
  * Date         : 10/10/2021
- * SVN          : $Id: cxlsim.cc 867 2009-11-05 02:28:12Z kacear $:
- * Description  : IO domain
+ * SVN          : $Id: cxlsim.cc 867 2021-10-10 02:28:12Z kacear $:
+ * Description  : CXL simulation base class
  *********************************************************************************************/
 
 #include <iostream>
@@ -108,8 +108,7 @@ void cxlsim_c::register_callback(callback_t* fn) {
   m_trans_done_cb = fn;
 }
 
-// FIXME : add queue here
-// & acquire entry from pool
+// accept request from the outside simulator
 bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
   if (m_rc->rootcomplex_full()) {
     return false;
@@ -126,13 +125,14 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
 
 void cxlsim_c::run_a_cycle(bool pll_locked) {
   // run root complex & memory expander
-  // from the viewpoint of the external simulator, the interconnect should 
-  // run_a_cycle whenever cxlsim_c::run_a_cycle is called
+  // - from the viewpoint of the external simulator, the interconnect should 
+  //   run_a_cycle whenever cxlsim_c::run_a_cycle is called
   m_mxp->run_a_cycle(pll_locked);
   m_rc->run_a_cycle(pll_locked);
   GET_NEXT_CYCLE(CLOCK_IO);
 
   // run dram inside the memory expander
+  // - should run only when the timing is correct
   while (m_clock_internal <= m_domain_next[CLOCK_CXLRAM] &&
       m_domain_next[CLOCK_CXLRAM] < m_domain_next[CLOCK_IO]) {
     m_mxp->run_a_cycle_internal(pll_locked);
@@ -172,6 +172,7 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
 }
 
 void cxlsim_c::finalize() {
+  // dump stats
   m_ProcessorStats->saveStats();
 }
 
@@ -184,9 +185,9 @@ void cxlsim_c::init_sim_objects() {
   m_rc = new pcie_rc_c(this);
   m_mxp = new cxlt3_c(this);
 
-  // init(id, is_master, message_pool, flit_pool, peer)
-  m_rc->init(0, true, m_msg_pool, m_flit_pool, m_mxp);
-  m_mxp->init(1, false, m_msg_pool, m_flit_pool, m_rc);
+  //    init(id, master, msg_pool,   flit_pool,   peer)
+  m_rc->init( 0, true,   m_msg_pool, m_flit_pool, m_mxp);
+  m_mxp->init(1, false,  m_msg_pool, m_flit_pool, m_rc);
 }
 
 void cxlsim_c::init_knobs(int argc, char** argv) {
@@ -210,14 +211,15 @@ void cxlsim_c::init_knobs(int argc, char** argv) {
 }
 
 void cxlsim_c::init_stats() {
+  // init core & processor stats
   m_coreStatsTemplate = new CoreStatistics(this);
   m_ProcessorStats = new ProcessorStatistics(this);
 
+  // init all stats
   m_allStats = new all_stats_c(m_ProcessorStats);
   m_allStats->initialize(m_ProcessorStats, m_coreStatsTemplate);
 }
 
-// ported from macsim
 void cxlsim_c::init_clock_domain() {
   const int domain_cnt = 2;
   float freq[domain_cnt];
@@ -256,10 +258,12 @@ void cxlsim_c::init_clock_domain() {
 }
 
 void cxlsim_c::request_done(cxl_req_s* req) {
+  // call registered callback function if it has one
   if (m_trans_done_cb) {
     (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
 
+  // release cxl request entry
   req->init();
   m_req_pool->release_entry(req);
 }

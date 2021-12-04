@@ -86,7 +86,6 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   start_transaction();
 
   // process memory requests
-/* m_dramsim->ClockTick(); */
   process_pending_req();
 
   // receive memory request
@@ -103,22 +102,14 @@ void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
   m_cycle_internal++;
 }
 
+// for requests finished from ramulator, send the response back to 
+// the root complex
 void cxlt3_c::start_transaction() {
   vector<cxl_req_s*> tmp_list;
 
   for (auto req : m_mxp_resp_queue) {
-    // free write requests here
-/* if (req->m_write) { */
-/* MEMORY->free_req(req->m_core_id, req); */
-/* req = NULL; */
-/* } */
-
     if (push_txvc(req)) {
-/* mxp_resp_queue.pop_front(); */
       tmp_list.push_back(req);
-/* if (req) { */
-/* req->m_state = mxp_PCIE_RETURNING; */
-/* } */
     } else {
       break;
     }
@@ -130,6 +121,7 @@ void cxlt3_c::start_transaction() {
 }
 
 // transactions ends in the viewpoint of RC
+// read messages from the rx vc & insert them into the dram pending queue
 void cxlt3_c::end_transaction() {
   while (1) {
     cxl_req_s* req = pull_rxvc();
@@ -141,6 +133,7 @@ void cxlt3_c::end_transaction() {
   }
 }
 
+// insert requests in to the ramulator
 void cxlt3_c::process_pending_req() {
   std::vector<cxl_req_s*> tmp_list;
   for (auto I = m_pending_req->begin(); I != m_pending_req->end(); I++) {
@@ -173,7 +166,6 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
       m_mxp_reads[ramu_req.addr].push_back(req);
     }
 
-    // added counter to track requests in flight
     ++m_mxp_requestsInFlight;
     return true;
   } else {
@@ -181,6 +173,7 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
   }
 }
 
+// ramulator read callback
 void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
   if (*KNOB(KNOB_DEBUG_IO_SYS)) {
     printf("Read to 0x%lx completed.\n", ramu_req.addr);
@@ -191,11 +184,11 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
   req_q.pop_front();
   if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr);
 
-  // added counter to track requests in flight
   --m_mxp_requestsInFlight;
   m_mxp_resp_queue.push_back(req);
 }
 
+// ramulator write callback
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   if (*KNOB(KNOB_DEBUG_IO_SYS)) {
     printf("Write to 0x%lx completed.\n", ramu_req.addr);
@@ -206,19 +199,11 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   req_q.pop_front();
   if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr);
 
-  // added counter to track requests in flight
   --m_mxp_requestsInFlight;
-
-  // update mxp return latency stats : writes don't return so finish here
-/* STAT_EVENT(AVG_mxp_WR_TURN_LATENCY_BASE); */
-/* STAT_EVENT_N(AVG_mxp_WR_TURN_LATENCY, */
-/* m_simBase->m_core_cycle[req->m_core_id] - req->m_insert_cycle); */
-
-  // in case of WB, retire requests here
-/* DEBUG("Retiring request for address 0x%lx\n", ramu_req.addr); */
   m_mxp_resp_queue.push_back(req);
 }
 
+// print for debugging
 void cxlt3_c::print_cxlt3_info() {
   std::cout << "-------------- mxp ------------------" << std::endl;
   print_ep_info();

@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : packet_info.h
  * Author       : Joonho
  * Date         : 10/8/2021
- * SVN          : $Id: packet_info.h,v 1.5 2008-09-17 21:01:41 kacear Exp $:
+ * SVN          : $Id: packet_info.h,v 1.5 2021-10-08 21:01:41 kacear Exp $:
  * Description  : PCIe packet information
  *********************************************************************************************/
 
@@ -47,6 +47,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "global_types.h"
 
 namespace CXL {
+
+//////////////////////////////////////////////////////////////////////////////
 
 typedef struct cxl_req_s {
   cxl_req_s(cxlsim_c* simBase);

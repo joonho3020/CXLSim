@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : main.cc
  * Author       : Joonho
  * Date         : 12/3/2021
- * SVN          : $Id: main.cc 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: main.cc 867 2021-12-03 02:28:12Z kacear $:
  * Description  : simulation main function
  *********************************************************************************************/
 
@@ -40,14 +40,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "global_types.h"
 
 int main(int argc, char **argv) {
+  // init cxl
   CXL::cxlsim_c* simBase = new CXL::cxlsim_c();
   simBase->init(argc, argv);
 
+  // init core
   CXL::core_c* my_core = new CXL::core_c(simBase);
 
+  // run simulation
   my_core->set_tracefile("../trace/sample.txt");
   my_core->run_sim();
 
+  // dump stats
   simBase->finalize();
 
   return 0;

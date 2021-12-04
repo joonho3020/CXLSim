@@ -1,8 +1,8 @@
 #ifndef __GLOBAL_DEFS_H__
 #define __GLOBAL_DEFS_H__
 
-namespace CXL
-{
+namespace CXL {
+
 // class
 class cxlsim_c;
 class all_knobs_c;
@@ -24,6 +24,7 @@ template <typename T> class knob_c;
 typedef struct cxl_req_s cxl_req_s;
 typedef struct message_s message_s;
 typedef struct flit_s flit_s;
+
 } // namespace CXL
 
 #endif //__GLOBAL_DEFS_H__

@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : pcie_endpoint.cc
  * Author       : Joonho
  * Date         : 8/10/2021
- * SVN          : $Id: cxl_t3.h 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: cxl_t3.h 867 2021-10-08 02:28:12Z kacear $:
  * Description  : PCIe endpoint device
  *********************************************************************************************/
 
@@ -80,6 +80,8 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_txreplay_cap = *KNOB(KNOB_PCIE_TXREPLAY_CAPACITY);
 
   // initialize physical layers 
+  // the number for consecutive flits that can be sent together 
+  // varies by the number of lanes (see CXL spec 2.0 physical layer)
   switch (m_lanes) {
     case 16: 
       m_phys_cap = 4; 
@@ -93,7 +95,7 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
       m_phys_cap = 1;
       break;
     default:
-      assert(0);
+      assert(0); // should be power of 2s
       break;
   }
 }

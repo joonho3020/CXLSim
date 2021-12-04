@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : core.h
  * Author       : Joonho
  * Date         : 12/3/2021
- * SVN          : $Id: core.cc 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: core.cc 867 2021-12-03 02:28:12Z kacear $:
  * Description  : core for callback test
  *********************************************************************************************/
 
@@ -46,6 +46,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace CXL {
 
+/////////////////////////////////////////////////////////////////////////////
+
+// example message struct sent from core to cxl
 typedef struct core_req_s {
   core_req_s();
   core_req_s(Addr addr, bool write);
@@ -55,6 +58,9 @@ typedef struct core_req_s {
   bool m_write;
 } core_req_s;
 
+/////////////////////////////////////////////////////////////////////////////
+
+// simple core
 class core_c {
 public:
   core_c(cxlsim_c* simBase);
@@ -69,8 +75,11 @@ private:
   void core_callback(Addr addr, bool write, void *req);
 
 public:
+  // for debugging
   Counter m_insert_reqs;
   Counter m_return_reqs;
+
+  // simbase
   cxlsim_c* m_simBase;
 
 private:

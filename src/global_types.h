@@ -39,6 +39,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstdint>
 
+namespace CXL {
+
 // Renames
 // Try to use these rather than built-in C types in order to preserve portability
 typedef unsigned uns;
@@ -70,5 +72,7 @@ typedef enum uop_latency_map {  // enum for x86 latency maps - Michael
   LATENCY_COFFEE_LAKE,
   NUM_LATENCY_MAPS
 } latency_map;
+
+}
 
 #endif // GLOBALS_H_INCLUDED

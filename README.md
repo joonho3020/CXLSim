@@ -20,4 +20,3 @@ make install
 
 # TODO
 - knobs : how am I going to generate knobs for standalone without conflict when integrating it with macsim?
-- change cxlt3\_c queue names

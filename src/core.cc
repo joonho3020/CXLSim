@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : core.cc
  * Author       : Joonho
  * Date         : 12/3/2021
- * SVN          : $Id: core.cc 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: core.cc 867 2021-12-03 02:28:12Z kacear $:
  * Description  : core for callback test
  *********************************************************************************************/
 
@@ -42,6 +42,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "core.h"
 
 namespace CXL {
+
+//////////////////////////////////////////////////////////////////////////////
 
 core_req_s::core_req_s() {
   init();
@@ -66,6 +68,7 @@ core_c::core_c(cxlsim_c* simBase) {
 
   callback_t *trans_callback = 
     new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_callback);
+
   m_simBase->register_callback(trans_callback);
 }
 
@@ -80,21 +83,22 @@ void core_c::set_tracefile(std::string filename) {
 void core_c::insert_request(Addr addr, bool write) {
   core_req_s* new_req = new core_req_s(addr, write);
 
-  if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
-    std::cout << "======================== insert core req =================================" << std::endl;
-    std::cout << m_insert_reqs << " " << addr << " " << write << " " << new_req << std::endl;
-    m_insert_reqs++;
-  }
-
-
   if (m_simBase->insert_request(addr, write, (void*)new_req)) {
     // do nothing
   } else {
     m_pending_q.push_back(new_req);
   }
+
+  // debug messages
+  if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+    std::cout << "======================== insert core req =================================" << std::endl;
+    std::cout << m_insert_reqs << " " << addr << " " << write << " " << new_req << std::endl;
+    m_insert_reqs++;
+  }
 }
 
 void core_c::run_a_cycle(bool pll_locked) {
+  // if the pending_q is not empty insert one req into cxl every cycle
   if (!m_pending_q.empty()) {
     core_req_s* req = m_pending_q.front();
     if(m_simBase->insert_request(req->m_addr, req->m_write, (void*)req)) {

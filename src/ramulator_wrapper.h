@@ -1,3 +1,5 @@
+// Ported from macsim
+
 #ifndef __CXLRAMULATOR_WRAPPER_H
 #define __CXLRAMULATOR_WRAPPER_H
 

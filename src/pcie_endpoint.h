@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : pcie_endpoint.h
  * Author       : Joonho
  * Date         : 8/10/2021
- * SVN          : $Id: cxl_t3.h 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: cxl_t3.h 867 2021-10-08 02:28:12Z kacear $:
  * Description  : PCIe endpoint device
  *********************************************************************************************/
 
@@ -77,11 +77,18 @@ public:
   virtual void run_a_cycle(bool pll_locked);
 
   /**
-   * Receive packet from transmit side & put in rx physical q
+   * Checks if rx physical layer of the peer is full
    */
   bool phys_layer_full(void);
+
+  /**
+   * Receive packet from transmit side & put in rx physical q
+   */
   void insert_phys(flit_s* flit);
 
+  /**
+   * Checks if the peer has enough rxvc entries left for this message type
+   */
   bool check_peer_credit(message_s* pkt);
 
   /**
@@ -97,17 +104,41 @@ private:
    */
   Counter get_phys_latency(flit_s* pkt);
 
+  /**
+   * Checks if m_*xdll_q is full
+   */
   bool dll_layer_full(bool tx);
 
+  /**
+   * Init new messages/flits
+   */
   void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
   void init_new_flit(flit_s* flit, int bits);
 
+  /**
+   * Checks if the txvc is not full 
+   */
   bool txvc_not_full(int channel);
+
+  /**
+   * RX side dll layer parses the flit and inserts each message
+   * into the correct VC
+   */
   void parse_and_insert_flit(flit_s* flit);
 
+  /**
+   * Checks & updates the state of entries if the flit is received by the peer
+   */
   void refresh_replay_buffer(void);
 
+  /**
+   * Checks if the message is a with data type
+   */
   bool is_wdata_msg(message_s* msg);
+
+  /**
+   * For with-data msgs, add data messages and insert them to the txdll
+   */
   void add_and_push_data_msg(message_s* msg);
 
 protected:
@@ -131,40 +162,44 @@ protected:
    */
   cxl_req_s* pull_rxvc();
 
-  // PCIE layer related
+  // PCIE TX layer related
   void process_txtrans();
   void process_txdll();
   void process_txphys();
 
+  // PCIE RX layer related
   void process_rxphys();
   void process_rxdll();
   void process_rxtrans();
 
 public:
+  /**
+   * Counters used for msg/flit id
+   */
   static int m_msg_uid;
   static int m_flit_uid;
 
 private:
   int m_id; /**< unique id of each endpoint */
-  bool m_master;
-  pool_c<message_s>* m_msg_pool; /**< packet pool */
-  pool_c<flit_s>* m_flit_pool;
+  bool m_master; /**< endpoint is masterside when true */
+  pool_c<message_s>* m_msg_pool; /**< message pool */
+  pool_c<flit_s>* m_flit_pool; /**< flit pool */
 
   int m_lanes; /**< PCIe lanes connected to endpoint */
-  float m_perlane_bw; /**< PCIe per lane BW in GB (cycles to send 1B) */
+  float m_perlane_bw; /**< PCIe per lane BW in GT/s */
   Counter m_prev_txphys_cycle; /**< finish cycle of previously sent packet */
 
-  int m_txvc_rr_idx;
+  int m_txvc_rr_idx; /** round robin id */
   int m_vc_cnt; /**< VC number */
   int m_txvc_cap; /**< VC buffer capacity */
   int m_rxvc_cap; /**< VC buffer capacity */
   std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
   std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
 
-  int m_txdll_cap;
-  std::list<message_s*> m_txdll_q;
-  int m_txreplay_cap;
-  std::list<flit_s*> m_txreplay_buff;
+  int m_txdll_cap; /**< dll layer queue capacity */
+  std::list<message_s*> m_txdll_q; /**< dll layer queue */
+  int m_txreplay_cap; /**< replay buffer capacity */
+  std::list<flit_s*> m_txreplay_buff; /**< replay buffer */
 
   int m_phys_cap; /**< maximum numbers of packets in physical layer q */
   std::list<flit_s*> m_rxphys_q; /**< physical layer receive queue */

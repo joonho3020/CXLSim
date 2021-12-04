@@ -30,7 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
  * File         : cxlsim.h
  * Author       : Joonho
  * Date         : 10/10/2021
- * SVN          : $Id: iosim.h 867 2009-11-05 02:28:12Z kacear $:
+ * SVN          : $Id: iosim.h 867 2021-10-10 02:28:12Z kacear $:
  * Description  : CXL simulation base class
  *********************************************************************************************/
 
@@ -46,6 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace CXL {
 
+// outer simulator callback function
 typedef CallbackBase<void, Addr, bool, void*> callback_t;
 
 typedef enum CLOCK_DOMAIN {
@@ -54,6 +55,7 @@ typedef enum CLOCK_DOMAIN {
   CLOCK_DOMAIN_COUNT
 } CLOCK_DOMAIN;
 
+// CXL simulator
 class cxlsim_c {
 public:
   /**
@@ -92,59 +94,53 @@ public:
    */
   void run_a_cycle(bool pll_locked);
 
+  /**
+   * Finish simulation
+   */
   void finalize();
 
   ////////////////////////////////////////////////////////////////////////////
 
 private:
-  // initialization
+  /**
+   * Functions for simulation init
+   */
   void init_sim_objects();
-
   void init_knobs(int argc, char **argv);
-
   void init_stats();
-
   void init_clock_domain();
 
   /* 
-   * called when a request returns to the RC, internally calls the 
+   * Called when a request returns to the RC, internally calls the 
    * registered callback function
    */
   void request_done(cxl_req_s* req);
 
 public:
-  // simulation objects
-  pcie_rc_c* m_rc;
-  cxlt3_c* m_mxp;
+  pcie_rc_c* m_rc; /**< Root Complex */
+  cxlt3_c* m_mxp; /**< MXP */
+  Counter m_cycle; /**< External clock */
 
-  // external clock
-  Counter m_cycle;
-
-  // knobs
   KnobsContainer* m_knobsContainer;
-  all_knobs_c* m_knobs;
+  all_knobs_c* m_knobs; /**< all_knobs */
 
-  // stats
-  all_stats_c *m_allStats;
+  all_stats_c *m_allStats; /**< all_stats*/
   ProcessorStatistics* m_ProcessorStats;
   CoreStatistics* m_coreStatsTemplate;
   std::map<std::string, std::ofstream *> m_AllStatsOutputStreams;
 
 private:
-  // memory pool
-  pool_c<cxl_req_s>* m_req_pool;
-  pool_c<message_s>* m_msg_pool;
-  pool_c<flit_s>* m_flit_pool;
+  pool_c<cxl_req_s>* m_req_pool; /**< memory pool for requests */
+  pool_c<message_s>* m_msg_pool; /**< memory pool for messages */
+  pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
 
-  // callback function for outer simulator
-  callback_t* m_trans_done_cb;
+  callback_t* m_trans_done_cb; /* callback function for the outer simultor */
 
-  // clock domain
-  int m_clock_lcm;
+  int m_clock_lcm;    /**< lcm of clock domains */
   int *m_domain_freq;
   int *m_domain_count;
   int *m_domain_next;
-  int m_clock_internal;
+  int m_clock_internal; /**<< internal clock of simulator */
 };
 
 }
