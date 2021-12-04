@@ -41,9 +41,17 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxl_t3.h"
 #include "packet_info.h"
 #include "utils.h"
+#include "statistics.h"
 #include "all_knobs.h"
+#include "all_stats.h"
 
 namespace CXL {
+
+#define GET_NEXT_CYCLE(domain)              \
+  ++m_domain_count[domain];                 \
+  m_domain_next[domain] = static_cast<int>( \
+    1.0 * m_clock_lcm * m_domain_count[domain] / m_domain_freq[domain]);
+
 
 int get_gcd(int a, int b) {
   if (b == 0) return a;
@@ -91,82 +99,10 @@ cxlsim_c::~cxlsim_c() {
 
 void cxlsim_c::init(int argc, char** argv) {
   init_knobs(argc, argv);
+  init_stats();
   init_sim_objects();
   init_clock_domain();
 }
-
-void cxlsim_c::init_knobs(int argc, char** argv) {
-  // Create the knob managing class
-  m_knobsContainer = new KnobsContainer();
-
-  // Get a reference to the actual knobs for this component instance
-  m_knobs = m_knobsContainer->getAllKnobs();
-
-  // apply values from parameters file
-  m_knobsContainer->applyParamFile("cxl_params.in");
-
-  // apply the supplied command line switches
-  char* pInvalidArgument = NULL;
-  if (!m_knobsContainer->applyComandLineArguments(argc, argv,
-                                                  &pInvalidArgument)) {
-  }
-
-  // save the states of all knobs to a file
-  m_knobsContainer->saveToFile("cxl_params.out");
-}
-
-void cxlsim_c::init_sim_objects() {
-  // io devices
-  m_rc = new pcie_rc_c(this);
-  m_cme = new cxlt3_c(this);
-
-  // init(id, is_master, message_pool, flit_pool, peer)
-  m_rc->init(0, true, m_msg_pool, m_flit_pool, m_cme);
-  m_cme->init(1, false, m_msg_pool, m_flit_pool, m_rc);
-}
-
-// ported from macsim
-void cxlsim_c::init_clock_domain() {
-  const int domain_cnt = 2;
-  float freq[domain_cnt];
-
-  freq[0] = m_knobs->KNOB_CLOCK_IO->getValue();
-  freq[1] = m_knobs->KNOB_CLOCK_CXLRAM->getValue();
-
-  // allow only .x format
-  for (int ii = 0; ii < 1; ++ii) {
-    bool found = false;
-    for (int jj = 0; jj < domain_cnt; ++jj) {
-      int int_cast = static_cast<int>(freq[jj]);
-      float float_cast = static_cast<float>(int_cast);
-      if (freq[jj] != float_cast) {
-        found = true;
-        break;
-      }
-    }
-
-    if (found) {
-      for (int jj = 0; jj < domain_cnt; ++jj) {
-        freq[jj] *= 10;
-      }
-    } else {
-      break;
-    }
-  }
-
-  m_domain_freq[0] = static_cast<int>(freq[0]);
-  m_domain_freq[1] = static_cast<int>(freq[1]);
-
-  m_clock_lcm = m_domain_freq[0];
-  for (int ii = 1; ii < domain_cnt; ii++) {
-    m_clock_lcm = get_lcm(m_clock_lcm, m_domain_freq[ii]);
-  }
-}
-
-#define GET_NEXT_CYCLE(domain)              \
-  ++m_domain_count[domain];                 \
-  m_domain_next[domain] = static_cast<int>( \
-    1.0 * m_clock_lcm * m_domain_count[domain] / m_domain_freq[domain]);
 
 void cxlsim_c::register_callback(callback_t* fn) {
   m_trans_done_cb = fn;
@@ -229,11 +165,93 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
 
   // print messages for debugging
   if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
-    std::cout << std::endl;
-    std::cout << "io cycle : " << std::dec << m_cycle << std::endl;
-    // m_simBase->m_dram_controller[0]->print_req();
+    std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
     m_cme->print_cxlt3_info();
     m_rc->print_rc_info();
+  }
+}
+
+void cxlsim_c::finalize() {
+  m_ProcessorStats->saveStats();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// private
+//////////////////////////////////////////////////////////////////////////////
+
+void cxlsim_c::init_sim_objects() {
+  // io devices
+  m_rc = new pcie_rc_c(this);
+  m_cme = new cxlt3_c(this);
+
+  // init(id, is_master, message_pool, flit_pool, peer)
+  m_rc->init(0, true, m_msg_pool, m_flit_pool, m_cme);
+  m_cme->init(1, false, m_msg_pool, m_flit_pool, m_rc);
+}
+
+void cxlsim_c::init_knobs(int argc, char** argv) {
+  // Create the knob managing class
+  m_knobsContainer = new KnobsContainer();
+
+  // Get a reference to the actual knobs for this component instance
+  m_knobs = m_knobsContainer->getAllKnobs();
+
+  // apply values from parameters file
+  m_knobsContainer->applyParamFile("cxl_params.in");
+
+  // apply the supplied command line switches
+  char* pInvalidArgument = NULL;
+  if (!m_knobsContainer->applyComandLineArguments(argc, argv,
+                                                  &pInvalidArgument)) {
+  }
+
+  // save the states of all knobs to a file
+  m_knobsContainer->saveToFile("cxl_params.out");
+}
+
+void cxlsim_c::init_stats() {
+  m_coreStatsTemplate = new CoreStatistics(this);
+  m_ProcessorStats = new ProcessorStatistics(this);
+
+  m_allStats = new all_stats_c(m_ProcessorStats);
+  m_allStats->initialize(m_ProcessorStats, m_coreStatsTemplate);
+}
+
+// ported from macsim
+void cxlsim_c::init_clock_domain() {
+  const int domain_cnt = 2;
+  float freq[domain_cnt];
+
+  freq[0] = m_knobs->KNOB_CLOCK_IO->getValue();
+  freq[1] = m_knobs->KNOB_CLOCK_CXLRAM->getValue();
+
+  // allow only .x format
+  for (int ii = 0; ii < 1; ++ii) {
+    bool found = false;
+    for (int jj = 0; jj < domain_cnt; ++jj) {
+      int int_cast = static_cast<int>(freq[jj]);
+      float float_cast = static_cast<float>(int_cast);
+      if (freq[jj] != float_cast) {
+        found = true;
+        break;
+      }
+    }
+
+    if (found) {
+      for (int jj = 0; jj < domain_cnt; ++jj) {
+        freq[jj] *= 10;
+      }
+    } else {
+      break;
+    }
+  }
+
+  m_domain_freq[0] = static_cast<int>(freq[0]);
+  m_domain_freq[1] = static_cast<int>(freq[1]);
+
+  m_clock_lcm = m_domain_freq[0];
+  for (int ii = 1; ii < domain_cnt; ii++) {
+    m_clock_lcm = get_lcm(m_clock_lcm, m_domain_freq[ii]);
   }
 }
 

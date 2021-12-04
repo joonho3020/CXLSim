@@ -92,13 +92,17 @@ public:
    */
   void run_a_cycle(bool pll_locked);
 
-  /////////////////////////////////////////////////////////////////////////////
+  void finalize();
+
+  ////////////////////////////////////////////////////////////////////////////
 
 private:
   // initialization
   void init_sim_objects();
 
   void init_knobs(int argc, char **argv);
+
+  void init_stats();
 
   void init_clock_domain();
 
@@ -121,9 +125,10 @@ public:
   all_knobs_c* m_knobs;
 
   // stats
-  std::map<std::string, std::ofstream *> m_AllStatsOutputStreams;
+  all_stats_c *m_allStats;
   ProcessorStatistics* m_ProcessorStats;
   CoreStatistics* m_coreStatsTemplate;
+  std::map<std::string, std::ofstream *> m_AllStatsOutputStreams;
 
 private:
   // memory pool

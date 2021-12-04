@@ -1,0 +1,28 @@
+####################################################################################################
+Interval
+####################################################################################################
+Cumulative:         Cycles:                  20000     Instructions:                  1200
+PCIE_GOODPUT_BASE                                            2112                          2112
+
+AVG_PCIE_GOODPUT                                             1151                      0.544981
+
+PCIE_FLIT_BASE                                                  4                             4
+
+AVG_PCIE_PHYS_LATENCY                                          28                             7
+
+PCIE_TXTRANS_BASE                                               2                             2
+
+AVG_PCIE_TXTRANS_LATENCY                                        2                             1
+
+PCIE_TXDLL_BASE                                                10                            10
+
+AVG_PCIE_TXDLL_LATENCY                                        102                          10.2
+
+PCIE_RXDLL_BASE                                                10                            10
+
+AVG_PCIE_RXDLL_LATENCY                                         50                             5
+
+PCIE_RXTRANS_BASE                                              10                            10
+
+AVG_PCIE_RXTRANS_LATENCY                                       50                             5
+

@@ -48,5 +48,7 @@ int main(int argc, char **argv) {
   my_core->set_tracefile("../trace/sample.txt");
   my_core->run_sim();
 
+  simBase->finalize();
+
   return 0;
 }
