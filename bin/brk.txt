@@ -1,3 +1,1 @@
-break cxlt3_c::readComplete(ramulator::Request&)
-break cxlt3_c::writeComplete(ramulator::Request&)
-break cxlt3_c::start_transaction()
+break cxlsim_c::run_a_cycle(bool)

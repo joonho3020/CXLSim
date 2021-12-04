@@ -189,16 +189,16 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
 }
 
 void cxlsim_c::run_a_cycle(bool pll_locked) {
-
   // run root complex & memory expander
-  if (m_clock_internal == m_domain_next[CLOCK_IO]) {
-    m_cme->run_a_cycle(pll_locked);
-    m_rc->run_a_cycle(pll_locked);
-    GET_NEXT_CYCLE(CLOCK_IO);
-  }
+  // from the viewpoint of the external simulator, the interconnect should 
+  // run_a_cycle whenever cxlsim_c::run_a_cycle is called
+  m_cme->run_a_cycle(pll_locked);
+  m_rc->run_a_cycle(pll_locked);
+  GET_NEXT_CYCLE(CLOCK_IO);
 
   // run dram inside the memory expander
-  if (m_clock_internal == m_domain_next[CLOCK_CXLRAM]) {
+  while (m_clock_internal <= m_domain_next[CLOCK_CXLRAM] &&
+      m_domain_next[CLOCK_CXLRAM] < m_domain_next[CLOCK_IO]) {
     m_cme->run_a_cycle_internal(pll_locked);
     GET_NEXT_CYCLE(CLOCK_CXLRAM);
   }
@@ -217,7 +217,9 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   m_cycle++;
 
   // update internal clock
-  if (++m_clock_internal == m_clock_lcm) {
+  m_clock_internal += static_cast<int>(1.0 * m_clock_lcm / 
+                                       m_domain_freq[CLOCK_IO]);
+  if (m_clock_internal == m_clock_lcm) {
     m_clock_internal = 0;
     for (int ii = 0; ii < 2; ii++) {
       m_domain_count[ii] = 0;
