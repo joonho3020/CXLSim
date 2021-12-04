@@ -48,6 +48,12 @@ namespace CXL {
 
 typedef CallbackBase<void, Addr, bool, void*> callback_t;
 
+typedef enum CLOCK_DOMAIN {
+  CLOCK_IO = 0,
+  CLOCK_CXLRAM,
+  CLOCK_DOMAIN_COUNT
+} CLOCK_DOMAIN;
+
 class cxlsim_c {
 public:
   /**
@@ -60,27 +66,54 @@ public:
    */
   ~cxlsim_c();
 
-  void init_knobs(int argc, char **argv);
+  ///////////////////////////////////////////////////////////////////////////
+  // API : Outer simulator interface
+  ///////////////////////////////////////////////////////////////////////////
 
   /**
-   * Initialized
+   * Initialize
    */
-  void init_sim();
+  void init(int argc, char **argv);
 
+  /** 
+   * callback function register
+  */
   void register_callback(callback_t* fn);
 
-  bool insert_request(Addr addr, bool write, void *req);
+  /**
+   * insert a request to the CXL mem 
+   * - it can take a arbitrary pointer type of the outer simulator (void* req)
+   *   and return it by the registered callback function
+   */
+  bool insert_request(Addr addr, bool write, void* req);
 
   /**
    * Tick a cycle
    */
   void run_a_cycle(bool pll_locked);
 
+  /////////////////////////////////////////////////////////////////////////////
+
+private:
+  // initialization
+  void init_sim_objects();
+
+  void init_knobs(int argc, char **argv);
+
+  void init_clock_domain();
+
+  /* 
+   * called when a request returns to the RC, internally calls the 
+   * registered callback function
+   */
   void request_done(cxl_req_s* req);
 
 public:
+  // simulation objects
   pcie_rc_c* m_rc;
   cxlt3_c* m_cme;
+
+  // external clock
   Counter m_cycle;
 
   // knobs
@@ -93,10 +126,20 @@ public:
   CoreStatistics* m_coreStatsTemplate;
 
 private:
+  // memory pool
   pool_c<cxl_req_s>* m_req_pool;
   pool_c<message_s>* m_msg_pool;
   pool_c<flit_s>* m_flit_pool;
+
+  // callback function for outer simulator
   callback_t* m_trans_done_cb;
+
+  // clock domain
+  int m_clock_lcm;
+  int *m_domain_freq;
+  int *m_domain_count;
+  int *m_domain_next;
+  int m_clock_internal;
 };
 
 }

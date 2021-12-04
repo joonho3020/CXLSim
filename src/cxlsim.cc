@@ -45,6 +45,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace CXL {
 
+int get_gcd(int a, int b) {
+  if (b == 0) return a;
+
+  return get_gcd(b, a % b);
+}
+
+int get_lcm(int a, int b) {
+  return (a * b) / get_gcd(a, b);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // public
 ///////////////////////////////////////////////////////////////////////////////
@@ -58,6 +69,13 @@ cxlsim_c::cxlsim_c() {
   m_msg_pool = new pool_c<message_s>;
   m_flit_pool = new pool_c<flit_s>;
   m_trans_done_cb = NULL;
+
+  // clock domain
+  m_clock_lcm = 1;
+  m_domain_freq = new int[2];
+  m_domain_count = new int[2];
+  m_domain_next = new int[2];
+  m_clock_internal = 0;
 }
 
 cxlsim_c::~cxlsim_c() {
@@ -66,6 +84,15 @@ cxlsim_c::~cxlsim_c() {
   delete m_req_pool;
   delete m_msg_pool;
   delete m_flit_pool;
+  delete m_domain_freq;
+  delete m_domain_count;
+  delete m_domain_next;
+}
+
+void cxlsim_c::init(int argc, char** argv) {
+  init_knobs(argc, argv);
+  init_sim_objects();
+  init_clock_domain();
 }
 
 void cxlsim_c::init_knobs(int argc, char** argv) {
@@ -88,14 +115,58 @@ void cxlsim_c::init_knobs(int argc, char** argv) {
   m_knobsContainer->saveToFile("cxl_params.out");
 }
 
-void cxlsim_c::init_sim() {
+void cxlsim_c::init_sim_objects() {
   // io devices
   m_rc = new pcie_rc_c(this);
   m_cme = new cxlt3_c(this);
 
+  // init(id, is_master, message_pool, flit_pool, peer)
   m_rc->init(0, true, m_msg_pool, m_flit_pool, m_cme);
   m_cme->init(1, false, m_msg_pool, m_flit_pool, m_rc);
 }
+
+// ported from macsim
+void cxlsim_c::init_clock_domain() {
+  const int domain_cnt = 2;
+  float freq[domain_cnt];
+
+  freq[0] = m_knobs->KNOB_CLOCK_IO->getValue();
+  freq[1] = m_knobs->KNOB_CLOCK_CXLRAM->getValue();
+
+  // allow only .x format
+  for (int ii = 0; ii < 1; ++ii) {
+    bool found = false;
+    for (int jj = 0; jj < domain_cnt; ++jj) {
+      int int_cast = static_cast<int>(freq[jj]);
+      float float_cast = static_cast<float>(int_cast);
+      if (freq[jj] != float_cast) {
+        found = true;
+        break;
+      }
+    }
+
+    if (found) {
+      for (int jj = 0; jj < domain_cnt; ++jj) {
+        freq[jj] *= 10;
+      }
+    } else {
+      break;
+    }
+  }
+
+  m_domain_freq[0] = static_cast<int>(freq[0]);
+  m_domain_freq[1] = static_cast<int>(freq[1]);
+
+  m_clock_lcm = m_domain_freq[0];
+  for (int ii = 1; ii < domain_cnt; ii++) {
+    m_clock_lcm = get_lcm(m_clock_lcm, m_domain_freq[ii]);
+  }
+}
+
+#define GET_NEXT_CYCLE(domain)              \
+  ++m_domain_count[domain];                 \
+  m_domain_next[domain] = static_cast<int>( \
+    1.0 * m_clock_lcm * m_domain_count[domain] / m_domain_freq[domain]);
 
 void cxlsim_c::register_callback(callback_t* fn) {
   m_trans_done_cb = fn;
@@ -118,11 +189,21 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
 }
 
 void cxlsim_c::run_a_cycle(bool pll_locked) {
-  m_cme->run_a_cycle(pll_locked);
-  // FIXME : different clock ratio
-  m_cme->run_a_cycle_internal(pll_locked);
-  m_rc->run_a_cycle(pll_locked);
 
+  // run root complex & memory expander
+  if (m_clock_internal == m_domain_next[CLOCK_IO]) {
+    m_cme->run_a_cycle(pll_locked);
+    m_rc->run_a_cycle(pll_locked);
+    GET_NEXT_CYCLE(CLOCK_IO);
+  }
+
+  // run dram inside the memory expander
+  if (m_clock_internal == m_domain_next[CLOCK_CXLRAM]) {
+    m_cme->run_a_cycle_internal(pll_locked);
+    GET_NEXT_CYCLE(CLOCK_CXLRAM);
+  }
+
+  // pull finished requests from the root complex
   while (1) {
     cxl_req_s* finished_req = m_rc->pop_request();
     if (finished_req == NULL) { // no finished request
@@ -132,8 +213,19 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
     }
   }
 
+  // update external clock 
   m_cycle++;
 
+  // update internal clock
+  if (++m_clock_internal == m_clock_lcm) {
+    m_clock_internal = 0;
+    for (int ii = 0; ii < 2; ii++) {
+      m_domain_count[ii] = 0;
+      m_domain_next[ii] = 0;
+    }
+  }
+
+  // print messages for debugging
   if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
     std::cout << std::endl;
     std::cout << "io cycle : " << std::dec << m_cycle << std::endl;
@@ -143,7 +235,6 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   }
 }
 
-// FIXME : release cxl_req_s from pool
 void cxlsim_c::request_done(cxl_req_s* req) {
   if (m_trans_done_cb) {
     (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);

@@ -27,7 +27,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /**********************************************************************************************
- * File         : core.h
+ * File         : main.cc
  * Author       : Joonho
  * Date         : 12/3/2021
  * SVN          : $Id: main.cc 867 2009-11-05 02:28:12Z kacear $:
@@ -41,10 +41,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 int main(int argc, char **argv) {
   CXL::cxlsim_c* simBase = new CXL::cxlsim_c();
-  simBase->init_knobs(argc, argv);
-  simBase->init_sim();
+  simBase->init(argc, argv);
 
-  CXL::core* my_core = new CXL::core(simBase);
+  CXL::core_c* my_core = new CXL::core_c(simBase);
 
   my_core->set_tracefile("../trace/sample.txt");
   my_core->run_sim();

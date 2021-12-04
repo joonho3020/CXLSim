@@ -1,9 +1,10 @@
 
 # Simulation Configuration
-num_sim_cores 4
+num_sim_cores 1
 
 # Clock
 clock_io 1.6
+clock_cxlram 1.2
 
 # CXL
 cme_enable 1

@@ -27,7 +27,8 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /* General IO */
-param<CLOCK_IO, clock_io, float, 0.8>
+param<CLOCK_IO, clock_io, float, 1.6>
+param<CLOCK_CXLRAM, clock_cxlram, float, 1.2> 
 
 /* CME */
 param<CME_ENABLE, cme_enable, bool, false>
