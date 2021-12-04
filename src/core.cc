@@ -59,25 +59,25 @@ void core_req_s::init() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-core::core(cxlsim_c* simBase) {
+core_c::core_c(cxlsim_c* simBase) {
   m_simBase = simBase;
   m_return_reqs = 0;
   m_insert_reqs = 0;
 
   callback_t *trans_callback = 
-    new Callback<core, void, Addr, bool, void*>(&(*this), &core::core_callback);
+    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_callback);
   m_simBase->register_callback(trans_callback);
 }
 
-core::~core() {
+core_c::~core_c() {
   delete m_simBase;
 }
 
-void core::set_tracefile(std::string filename) {
+void core_c::set_tracefile(std::string filename) {
   m_tracefilename = filename;
 }
 
-void core::insert_request(Addr addr, bool write) {
+void core_c::insert_request(Addr addr, bool write) {
   core_req_s* new_req = new core_req_s(addr, write);
 
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
@@ -94,7 +94,7 @@ void core::insert_request(Addr addr, bool write) {
   }
 }
 
-void core::run_a_cycle(bool pll_locked) {
+void core_c::run_a_cycle(bool pll_locked) {
   if (!m_pending_q.empty()) {
     core_req_s* req = m_pending_q.front();
     if(m_simBase->insert_request(req->m_addr, req->m_write, (void*)req)) {
@@ -105,7 +105,7 @@ void core::run_a_cycle(bool pll_locked) {
   m_simBase->run_a_cycle(pll_locked);
 }
 
-void core::run_sim() {
+void core_c::run_sim() {
   std::ifstream file(m_tracefilename);
 
   // read traces
@@ -131,7 +131,7 @@ void core::run_sim() {
   }
 }
 
-void core::core_callback(Addr addr, bool write, void *req) {
+void core_c::core_callback(Addr addr, bool write, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== core callback =================================" << std::endl;
     std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;

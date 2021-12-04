@@ -55,10 +55,10 @@ typedef struct core_req_s {
   bool m_write;
 } core_req_s;
 
-class core {
+class core_c {
 public:
-  core(cxlsim_c* simBase);
-  ~core();
+  core_c(cxlsim_c* simBase);
+  ~core_c();
 
   void set_tracefile(std::string filename);
   void insert_request(Addr addr, bool write);
