@@ -294,10 +294,12 @@ bool pcie_ep_c::push_txvc(cxl_req_s* cxl_req) {
   message_s* new_msg;
   int channel;
 
+  assert(cxl_req);
+
   if (m_master) {
     channel = (cxl_req && cxl_req->m_write) ? WD_CHANNEL : WOD_CHANNEL;
   } else {
-    channel = (cxl_req != NULL) ? WD_CHANNEL : WOD_CHANNEL;
+    channel = (cxl_req && !cxl_req->m_write) ? WD_CHANNEL : WOD_CHANNEL;
   }
 
   if (!txvc_not_full(channel)) { // txvc full
