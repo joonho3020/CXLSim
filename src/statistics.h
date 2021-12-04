@@ -66,7 +66,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "global_defs.h"
 
 
-namespace CXL {
+namespace cxlsim {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FILED1_LENGTH 45

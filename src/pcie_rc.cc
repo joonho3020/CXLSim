@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_knobs.h"
 #include "pcie_rc.h"
 
-namespace CXL {
+namespace cxlsim {
 
 pcie_rc_c::pcie_rc_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase) {

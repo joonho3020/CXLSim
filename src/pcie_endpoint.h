@@ -44,7 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "packet_info.h"
 #include "cxlsim.h"
 
-namespace CXL {
+namespace cxlsim {
 
 #define TX true
 #define RX false

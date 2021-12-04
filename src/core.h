@@ -44,7 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "global_types.h"
 #include "global_defs.h"
 
-namespace CXL {
+namespace cxlsim {
 
 /////////////////////////////////////////////////////////////////////////////
 

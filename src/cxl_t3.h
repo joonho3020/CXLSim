@@ -52,7 +52,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ramulator/src/Config.h"
 #include "global_defs.h"
 
-namespace CXL {
+namespace cxlsim {
 
 class cxlt3_c : public pcie_ep_c
 {

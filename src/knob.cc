@@ -42,7 +42,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "knob.h"
 #include "all_knobs.h"
 
-namespace CXL {
+namespace cxlsim {
 
 // constructor
 KnobsContainer::KnobsContainer() {

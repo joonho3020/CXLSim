@@ -193,7 +193,7 @@ sub writeSource
   print ALLKNOBS_C "#include \"all_knobs.h\"\n\n";
   print ALLKNOBS_C "#include <string>\n\n";
 
-  print ALLKNOBS_C "namespace CXL {\n\n";
+  print ALLKNOBS_C "namespace cxlsim {\n\n";
   
   #constructor
   print ALLKNOBS_C "all_knobs_c::all_knobs_c() {\n";
@@ -262,7 +262,7 @@ sub writeHeader
   }
   
   print ALLKNOBS_H "\n};\n\n";
-  print ALLKNOBS_H "} // namespace CXL\n\n";
+  print ALLKNOBS_H "} // namespace cxlsim\n\n";
   print ALLKNOBS_H "#endif //__ALL_KNOBS_H_INCLUDED__\n";
   
 }

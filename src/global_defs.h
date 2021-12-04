@@ -1,7 +1,7 @@
 #ifndef __GLOBAL_DEFS_H__
 #define __GLOBAL_DEFS_H__
 
-namespace CXL {
+namespace cxlsim {
 
 // class
 class cxlsim_c;

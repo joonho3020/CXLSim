@@ -41,11 +41,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 int main(int argc, char **argv) {
   // init cxl
-  CXL::cxlsim_c* simBase = new CXL::cxlsim_c();
+  cxlsim::cxlsim_c* simBase = new cxlsim::cxlsim_c();
   simBase->init(argc, argv);
 
   // init core
-  CXL::core_c* my_core = new CXL::core_c(simBase);
+  cxlsim::core_c* my_core = new cxlsim::core_c(simBase);
 
   // run simulation
   my_core->set_tracefile("../trace/sample.txt");

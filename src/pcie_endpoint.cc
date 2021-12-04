@@ -45,7 +45,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_stats.h"
 #include "assert_macros.h"
 
-namespace CXL {
+namespace cxlsim {
 
 int pcie_ep_c::m_msg_uid;
 int pcie_ep_c::m_flit_uid;

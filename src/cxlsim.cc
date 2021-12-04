@@ -45,7 +45,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_knobs.h"
 #include "all_stats.h"
 
-namespace CXL {
+namespace cxlsim {
 
 #define GET_NEXT_CYCLE(domain)              \
   ++m_domain_count[domain];                 \

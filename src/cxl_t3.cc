@@ -46,7 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "ramulator/src/Request.h"
 
-namespace CXL {
+namespace cxlsim {
 
 cxlt3_c::cxlt3_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase),

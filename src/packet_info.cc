@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "packet_info.h"
 #include "global_types.h"
 
-namespace CXL {
+namespace cxlsim {
 
 //////////////////////////////////////////////////////////////////////////////
 

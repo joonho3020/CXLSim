@@ -39,7 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <cassert>
 
-namespace CXL {
+namespace cxlsim {
 
 #define ASSERTM(cond, msg) assert(cond && msg)
 

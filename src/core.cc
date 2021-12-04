@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxlsim.h"
 #include "core.h"
 
-namespace CXL {
+namespace cxlsim {
 
 //////////////////////////////////////////////////////////////////////////////
 

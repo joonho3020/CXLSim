@@ -116,7 +116,7 @@ open(ALLSTATH, ">$allstath") || die("Can not open file $allstath\n");
 	
 	print ALLSTATH "#include \"statistics.h\"\n\n";
 
-  print ALLSTATH "namespace CXL {\n\n";
+  print ALLSTATH "namespace cxlsim {\n\n";
 	
   print ALLSTATH "///////////////////////////////////////////////////////////////////////////////////////////////\n";
   print ALLSTATH "/// \\brief knob variables holder\n";
@@ -158,7 +158,7 @@ open(ALLSTATS, ">$allstats") || die("Can not open file $allstats\n");
 	print ALLSTATS "#include \"all_stats.h\"\n";
 	print ALLSTATS "#include \"statsEnums.h\"\n\n";
 
-  print ALLSTATS "namespace CXL {\n\n";
+  print ALLSTATS "namespace cxlsim {\n\n";
 	
 	#constructor
 	print ALLSTATS "all_stats_c::all_stats_c(ProcessorStatistics\* procStat) {\n";
@@ -184,7 +184,7 @@ open(ALLSTATS, ">$allstats") || die("Can not open file $allstats\n");
 		print ALLSTATS "\n\n";
 		for $initLine (@allstats_init_coreCollection)   {print ALLSTATS "\t".$initLine;}
 	print ALLSTATS "}\n\n";
-	print ALLSTATS "} // namespace CXL\n";
+	print ALLSTATS "} // namespace cxlsim\n";
 	
 close (ALLSTATS);
 
@@ -194,7 +194,7 @@ close (ALLSTATS);
 	print ENUMDEF "#ifndef StatsEnums_Included\n";
 	print ENUMDEF "#define StatsEnums_Included\n\n";
 
-  print ENUMDEF "namespace CXL {\n\n";
+  print ENUMDEF "namespace cxlsim {\n\n";
 	
 	#per core stats, nagesh on apr-07-2009
 	$allCoreStatsEnumStart = 5000;
@@ -210,7 +210,7 @@ close (ALLSTATS);
 	
 	print ENUMDEF "\tStatisticsEnumEnd\n};\n";
 
-  print ENUMDEF "} // namespace CXL \n\n";
+  print ENUMDEF "} // namespace cxlsim \n\n";
 	print ENUMDEF "#endif //StatsEnums_Included\n";
 
 	

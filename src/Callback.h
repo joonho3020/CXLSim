@@ -36,7 +36,7 @@
 #ifndef __CALLBACK_H__
 #define __CALLBACK_H__
 
-namespace CXL
+namespace cxlsim
 {
 
 template <typename ReturnT, typename Param1T, typename Param2T, typename Param3T>
@@ -48,7 +48,7 @@ public:
 };
 
 template <typename ReturnT, typename Param1T, typename Param2T, typename Param3T>
-CXL::CallbackBase<ReturnT,Param1T,Param2T,Param3T>::~CallbackBase() {}
+cxlsim::CallbackBase<ReturnT,Param1T,Param2T,Param3T>::~CallbackBase() {}
 
 template <typename ConsumerT, typename ReturnT,
 typename Param1T, typename Param2T, typename Param3T>

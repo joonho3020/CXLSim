@@ -42,7 +42,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "pcie_endpoint.h"
 #include "global_defs.h"
 
-namespace CXL {
+namespace cxlsim {
 
 class pcie_rc_c : public pcie_ep_c 
 {

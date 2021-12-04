@@ -39,7 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstdint>
 
-namespace CXL {
+namespace cxlsim {
 
 // Renames
 // Try to use these rather than built-in C types in order to preserve portability
