@@ -217,7 +217,7 @@ sub writeSource
     print ALLKNOBS_C "\t$registerCall";
   }
   print ALLKNOBS_C "}\n\n";
-  print ALLKNOBS_C "} // namespace CXL \n\n";
+  print ALLKNOBS_C "} // namespace cxlsim \n\n";
   
 }
 ################################################################################
@@ -231,7 +231,7 @@ sub writeHeader
   print ALLKNOBS_H "#include \"global_types.h\"\n";
   print ALLKNOBS_H "#include \"knob.h\"\n\n";
 
-  print ALLKNOBS_H "namespace CXL {\n\n";
+  print ALLKNOBS_H "namespace cxlsim {\n\n";
 
 
   print ALLKNOBS_H "#define KNOB(var) m_simBase->m_knobs->var\n\n"; 
