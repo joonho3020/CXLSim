@@ -73,7 +73,7 @@ public:
   void run_a_cycle(bool pll_locked);
 
   /*
-   * Tick a internal cycle as CME has a faster internal clock frequency
+   * Tick a internal cycle as mxp has a faster internal clock frequency
    */
   void run_a_cycle_internal(bool pll_locked);
 
@@ -114,15 +114,15 @@ private:
   void writeComplete(ramulator::Request &ramu_req);
 
 private:
-  unsigned int cme_requestsInFlight;
-  std::map<long, std::list<cxl_req_s*>> cme_reads;
-  std::map<long, std::list<cxl_req_s*>> cme_writes;
-  std::list<cxl_req_s*> cme_resp_queue;
+  unsigned int m_mxp_requestsInFlight;
+  std::map<long, std::list<cxl_req_s*>> m_mxp_reads;
+  std::map<long, std::list<cxl_req_s*>> m_mxp_writes;
+  std::list<cxl_req_s*> m_mxp_resp_queue;
 
   ramulator::Config configs;
-  ramulator::CXLRamulatorWrapper *wrapper;
-  std::function<void(ramulator::Request &)> read_cb_func;
-  std::function<void(ramulator::Request &)> write_cb_func;
+  ramulator::CXLRamulatorWrapper *m_ramu_wrapper;
+  std::function<void(ramulator::Request &)> m_read_cb_func;
+  std::function<void(ramulator::Request &)> m_write_cb_func;
 
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
 

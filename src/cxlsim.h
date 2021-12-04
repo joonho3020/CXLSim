@@ -115,7 +115,7 @@ private:
 public:
   // simulation objects
   pcie_rc_c* m_rc;
-  cxlt3_c* m_cme;
+  cxlt3_c* m_mxp;
 
   // external clock
   Counter m_cycle;

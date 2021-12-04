@@ -6,10 +6,6 @@ num_sim_cores 1
 clock_io 1.6
 clock_cxlram 1.2
 
-# CXL
-cme_enable 1
-cme_addr_min 0
-
 # PCIe
 # BW related
 pcie_lanes 16

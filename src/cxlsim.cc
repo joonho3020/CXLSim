@@ -88,7 +88,7 @@ cxlsim_c::cxlsim_c() {
 
 cxlsim_c::~cxlsim_c() {
   delete m_rc;
-  delete m_cme;
+  delete m_mxp;
   delete m_req_pool;
   delete m_msg_pool;
   delete m_flit_pool;
@@ -128,14 +128,14 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   // run root complex & memory expander
   // from the viewpoint of the external simulator, the interconnect should 
   // run_a_cycle whenever cxlsim_c::run_a_cycle is called
-  m_cme->run_a_cycle(pll_locked);
+  m_mxp->run_a_cycle(pll_locked);
   m_rc->run_a_cycle(pll_locked);
   GET_NEXT_CYCLE(CLOCK_IO);
 
   // run dram inside the memory expander
   while (m_clock_internal <= m_domain_next[CLOCK_CXLRAM] &&
       m_domain_next[CLOCK_CXLRAM] < m_domain_next[CLOCK_IO]) {
-    m_cme->run_a_cycle_internal(pll_locked);
+    m_mxp->run_a_cycle_internal(pll_locked);
     GET_NEXT_CYCLE(CLOCK_CXLRAM);
   }
 
@@ -166,7 +166,7 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   // print messages for debugging
   if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
     std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
-    m_cme->print_cxlt3_info();
+    m_mxp->print_cxlt3_info();
     m_rc->print_rc_info();
   }
 }
@@ -182,11 +182,11 @@ void cxlsim_c::finalize() {
 void cxlsim_c::init_sim_objects() {
   // io devices
   m_rc = new pcie_rc_c(this);
-  m_cme = new cxlt3_c(this);
+  m_mxp = new cxlt3_c(this);
 
   // init(id, is_master, message_pool, flit_pool, peer)
-  m_rc->init(0, true, m_msg_pool, m_flit_pool, m_cme);
-  m_cme->init(1, false, m_msg_pool, m_flit_pool, m_rc);
+  m_rc->init(0, true, m_msg_pool, m_flit_pool, m_mxp);
+  m_mxp->init(1, false, m_msg_pool, m_flit_pool, m_rc);
 }
 
 void cxlsim_c::init_knobs(int argc, char** argv) {

@@ -30,11 +30,6 @@ POSSIBILITY OF SUCH DAMAGE.
 param<CLOCK_IO, clock_io, float, 1.6>
 param<CLOCK_CXLRAM, clock_cxlram, float, 1.2> 
 
-/* CME */
-param<CME_ENABLE, cme_enable, bool, false>
-param<CME_RANGE, cme_addr_min, uint64_t, 0>
-param<CME_LATENCY, cme_latency, long, 300>
-
 /* PCIe */
 param<PCIE_LANES, pcie_lanes, int, 8>
 param<PCIE_PER_LANE_BW, pcie_per_lane_bw, float, 32>

@@ -50,11 +50,11 @@ namespace CXL {
 
 cxlt3_c::cxlt3_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase),
-    cme_requestsInFlight(0),
-    wrapper(NULL),
-    read_cb_func(
+    m_mxp_requestsInFlight(0),
+    m_ramu_wrapper(NULL),
+    m_read_cb_func(
       std::bind(&cxlt3_c::readComplete, this, std::placeholders::_1)),
-    write_cb_func(std::bind(&cxlt3_c::writeComplete, this,
+    m_write_cb_func(std::bind(&cxlt3_c::writeComplete, this,
                             std::placeholders::_1)) {
   // init queues
   m_pending_req = new list<cxl_req_s*>();
@@ -64,7 +64,7 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
   configs.parse(config_file);
   configs.set_core_num(*KNOB(KNOB_NUM_SIM_CORES));
 
-  wrapper = new ramulator::CXLRamulatorWrapper(
+  m_ramu_wrapper = new ramulator::CXLRamulatorWrapper(
     configs, *KNOB(KNOB_RAMULATOR_CACHELINE_SIZE),
     *KNOB(KNOB_STATISTICS_OUT_DIRECTORY));
 
@@ -73,8 +73,8 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
 }
 
 cxlt3_c::~cxlt3_c() {
-  wrapper->finish();
-  delete wrapper;
+  m_ramu_wrapper->finish();
+  delete m_ramu_wrapper;
   delete m_pending_req;
 }
 
@@ -99,14 +99,14 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
 }
 
 void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
-  wrapper->tick();
+  m_ramu_wrapper->tick();
   m_cycle_internal++;
 }
 
 void cxlt3_c::start_transaction() {
   vector<cxl_req_s*> tmp_list;
 
-  for (auto req : cme_resp_queue) {
+  for (auto req : m_mxp_resp_queue) {
     // free write requests here
 /* if (req->m_write) { */
 /* MEMORY->free_req(req->m_core_id, req); */
@@ -114,10 +114,10 @@ void cxlt3_c::start_transaction() {
 /* } */
 
     if (push_txvc(req)) {
-/* cme_resp_queue.pop_front(); */
+/* mxp_resp_queue.pop_front(); */
       tmp_list.push_back(req);
 /* if (req) { */
-/* req->m_state = CME_PCIE_RETURNING; */
+/* req->m_state = mxp_PCIE_RETURNING; */
 /* } */
     } else {
       break;
@@ -125,7 +125,7 @@ void cxlt3_c::start_transaction() {
   }
 
   for (auto I = tmp_list.begin(), end = tmp_list.end(); I != end; ++I) {
-    cme_resp_queue.remove(*I);
+    m_mxp_resp_queue.remove(*I);
   }
 }
 
@@ -159,22 +159,22 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
   bool is_write = req->m_write;
   auto req_type = (is_write) ? ramulator::Request::Type::WRITE
                              : ramulator::Request::Type::READ;
-  auto cb_func = (is_write) ? write_cb_func : read_cb_func;
+  auto cb_func = (is_write) ? m_write_cb_func : m_read_cb_func;
   long addr = static_cast<long>(req->m_addr);
 
   ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id);
-  bool accepted = wrapper->send(ramu_req);
+  bool accepted = m_ramu_wrapper->send(ramu_req);
 
   if (accepted) {
     if (is_write) {
       // FIXME : fix this it req->m_id
-      cme_writes[ramu_req.addr].push_back(req);
+      m_mxp_writes[ramu_req.addr].push_back(req);
     } else {
-      cme_reads[ramu_req.addr].push_back(req);
+      m_mxp_reads[ramu_req.addr].push_back(req);
     }
 
     // added counter to track requests in flight
-    ++cme_requestsInFlight;
+    ++m_mxp_requestsInFlight;
     return true;
   } else {
     return false;
@@ -186,14 +186,14 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
     printf("Read to 0x%lx completed.\n", ramu_req.addr);
   }
 
-  auto &req_q = cme_reads.find(ramu_req.addr)->second;
+  auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
   cxl_req_s *req = req_q.front();
   req_q.pop_front();
-  if (!req_q.size()) cme_reads.erase(ramu_req.addr);
+  if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr);
 
   // added counter to track requests in flight
-  --cme_requestsInFlight;
-  cme_resp_queue.push_back(req);
+  --m_mxp_requestsInFlight;
+  m_mxp_resp_queue.push_back(req);
 }
 
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
@@ -201,26 +201,26 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
     printf("Write to 0x%lx completed.\n", ramu_req.addr);
   }
 
-  auto &req_q = cme_writes.find(ramu_req.addr)->second;
+  auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;
   cxl_req_s *req = req_q.front();
   req_q.pop_front();
-  if (!req_q.size()) cme_writes.erase(ramu_req.addr);
+  if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr);
 
   // added counter to track requests in flight
-  --cme_requestsInFlight;
+  --m_mxp_requestsInFlight;
 
-  // update CME return latency stats : writes don't return so finish here
-/* STAT_EVENT(AVG_CME_WR_TURN_LATENCY_BASE); */
-/* STAT_EVENT_N(AVG_CME_WR_TURN_LATENCY, */
+  // update mxp return latency stats : writes don't return so finish here
+/* STAT_EVENT(AVG_mxp_WR_TURN_LATENCY_BASE); */
+/* STAT_EVENT_N(AVG_mxp_WR_TURN_LATENCY, */
 /* m_simBase->m_core_cycle[req->m_core_id] - req->m_insert_cycle); */
 
   // in case of WB, retire requests here
 /* DEBUG("Retiring request for address 0x%lx\n", ramu_req.addr); */
-  cme_resp_queue.push_back(req);
+  m_mxp_resp_queue.push_back(req);
 }
 
 void cxlt3_c::print_cxlt3_info() {
-  std::cout << "-------------- CME ------------------" << std::endl;
+  std::cout << "-------------- mxp ------------------" << std::endl;
   print_ep_info();
 
   std::cout << "pending q" << ": ";
@@ -228,10 +228,10 @@ void cxlt3_c::print_cxlt3_info() {
     std::cout << std::hex << req->m_addr << " ; ";
   }
 
-  std::cout << cme_requestsInFlight << std::endl;
+  std::cout << m_mxp_requestsInFlight << std::endl;
 
   std::cout << "Read q" << std::endl;
-  for (auto iter : cme_reads) {
+  for (auto iter : m_mxp_reads) {
     auto addr = iter.first;
     auto req_q = iter.second;
     std::cout << "Addr: " << std::hex << addr << ": ";
@@ -242,7 +242,7 @@ void cxlt3_c::print_cxlt3_info() {
   }
 
   std::cout << "Write q" << std::endl;
-  for (auto iter : cme_writes) {
+  for (auto iter : m_mxp_writes) {
     auto addr = iter.first;
     auto req_q = iter.second;
     std::cout << "Addr: " << std::hex << addr << ": ";
