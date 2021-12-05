@@ -6,7 +6,7 @@ src/all_stats.cc
 src/all_stats.h
 src/statsEnums.h
 build
-bin/cxlsim
+bin/sim
 bin/.gdb_history
 bin/*.out
 .ccls-cache
