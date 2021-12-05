@@ -1,6 +1,11 @@
 # src/CMAKELists.txt
 
 SET(SOURCES
+  main.cc
+  core.cc
+)
+
+SET(CXLLIB_SOURCES
   all_knobs.cc
   all_stats.cc
   cxl_t3.cc
@@ -11,8 +16,6 @@ SET(SOURCES
   pcie_rc.cc
   ramulator_wrapper.cc
   statistics.cc
-  main.cc
-  core.cc
 )
 
 SET(RAMULATOR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ramulator)
@@ -42,10 +45,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY, ${RAMULATOR_SOURCE_DIR})
 
 link_directories(${RAMULATOR_SOURCE_DIR})
 
+add_library(cxlsim STATIC ${CXLLIB_SOURCES})
+target_link_libraries(cxlsim ramulator)
+add_dependencies(cxlsim ramulator)
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_compile_definitions(${PROJECT_NAME} PUBLIC RAMULATOR)
-target_link_libraries(${PROJECT_NAME} ramulator)
-# target_compile_options(${PROJECT_NAME} PUBLIC -Wall)
-add_dependencies(${PROJECT_NAME} ramulator)
+target_link_libraries(${PROJECT_NAME} cxlsim)
+add_dependencies(${PROJECT_NAME} cxlsim)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION ../bin)
+install(TARGETS cxlsim DESTINATION ${PROJECT_SOURCE_DIR})

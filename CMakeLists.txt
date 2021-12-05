@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(cxlsim CXX)
+project(sim CXX)
 
 ## C++14 Rocks!
 set(CMAKE_CXX_STANDARD 14)

@@ -12,3 +12,4 @@ bin/*.out
 .ccls-cache
 **/*.swp
 stats
+libcxlsim.a
