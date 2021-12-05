@@ -33,6 +33,15 @@ pcie_max_msg_per_flit 4
 pcie_flit_bits 528
 pcie_data_slots_per_flit 4
 
+pcie_data_msg_bits 128
+pcie_req_msg_bits 87
+pcie_rwd_msg_bits 87
+pcie_ndr_msg_bits 30
+pcie_drs_msg_bits 40
+
+# Flit wait cycles
+pcie_max_flit_wait_cycle 2
+
 # DEBUG
 debug_io_sys 0
 debug_callback 1
