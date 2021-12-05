@@ -95,9 +95,8 @@ void message_s::print(void) {
                                 : (m_vc_id == WD_CHANNEL) ? "WDATA"
                                                           : "WODATA";
 
-  std::cout << "= <MSG> addr: " << std::hex << addr
-                << " channel: " << msg_type
-                << std::endl;
+  std::cout << " | <MSG> addr: " << std::hex << addr
+                << " channel: " << msg_type;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -124,6 +123,9 @@ void flit_s::print(void) {
   for (auto msg : m_msgs) {
     msg->print();
   }
+  std::cout << std::endl;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 } // namespace CXL

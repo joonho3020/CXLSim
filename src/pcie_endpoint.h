@@ -196,6 +196,18 @@ private:
   std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
   std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
 
+  int m_flit_ndr_cnt;
+  int m_flit_drs_cnt;
+  int m_slot_ndr_cnt;
+  int m_slot_drs_cnt;
+
+  int m_slot_cnt;
+
+  int m_max_flit_wait;
+  int m_flit_wait_cycle;
+
+  flit_s* m_cur_flit;
+
   int m_txdll_cap; /**< dll layer queue capacity */
   std::list<message_s*> m_txdll_q; /**< dll layer queue */
   int m_txreplay_cap; /**< replay buffer capacity */

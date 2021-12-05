@@ -75,6 +75,18 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
 
   ASSERTM(m_vc_cnt == 2, "currently only 2 virtual channels exist\n");
 
+  m_flit_ndr_cnt = 0;
+  m_flit_drs_cnt = 0;
+  m_slot_ndr_cnt = 0;
+  m_slot_drs_cnt = 0;
+
+  m_slot_cnt = 0;
+
+  m_max_flit_wait = *KNOB(KNOB_PCIE_MAX_FLIT_WAIT_CYCLE);
+  m_flit_wait_cycle = 0;
+
+  m_cur_flit = NULL;
+
   // initialize dll
   m_txdll_cap = *KNOB(KNOB_PCIE_TXDLL_CAPACITY);
   m_txreplay_cap = *KNOB(KNOB_PCIE_TXREPLAY_CAPACITY);
@@ -443,35 +455,79 @@ void pcie_ep_c::process_txdll() {
   flit_s* new_flit = NULL;
   int max_msg_per_flit = *KNOB(KNOB_PCIE_MAX_MSG_PER_FLIT);
 
+  if (m_cur_flit) {
+    m_flit_wait_cycle++;
+  }
+
   if (m_txreplay_cap == (int)m_txreplay_buff.size()) {
     return;
   }
 
-  for (int ii = 0; ii < max_msg_per_flit; ii++) {
+  for (; m_slot_cnt < max_msg_per_flit; ) {
     // dll q empty
     if ((int)m_txdll_q.size() == 0) {
       break;
     }
 
     msg = m_txdll_q.front();
-    if (msg->m_txtrans_end > m_cycle) { // message not ready
+/* if (msg->m_txtrans_end > m_cycle) { // message not ready */
+/* break; */
+    if (m_flit_ndr_cnt == 2 && msg->m_type == S2M_NDR) { // max ndr per flit
+      break;
+    } else if (m_flit_drs_cnt == 3 && msg->m_type == S2M_DRS) { // max drs per flit
       break;
     } else { // message ready
       m_txdll_q.pop_front();
 
-      if (new_flit == NULL) {
+      // make a flit if there is none
+      if (m_cur_flit == NULL) {
         new_flit = m_flit_pool->acquire_entry(m_simBase);
         init_new_flit(new_flit, *KNOB(KNOB_PCIE_FLIT_BITS));
+        m_cur_flit = new_flit;
       }
-      assert(new_flit);
-      new_flit->m_msgs.push_back(msg);
+      m_cur_flit->m_msgs.push_back(msg);
+
+      if (msg->m_type == M2S_REQ  || msg->m_type == M2S_RWD || 
+          msg->m_type == M2S_DATA || msg->m_type == S2M_DATA) { // takes one slot
+        m_slot_cnt++;
+      } else { // multiple messages fit in a slot
+        if (m_slot_ndr_cnt == 0 && m_slot_drs_cnt == 0) {
+          m_slot_cnt++;
+        }
+
+        if (msg->m_type == S2M_NDR) {
+          m_slot_ndr_cnt++;
+          m_flit_ndr_cnt++;
+        } else if (msg->m_type == S2M_DRS) { // S2M_DRS
+          m_slot_drs_cnt++;
+          m_flit_drs_cnt++;
+        }
+
+        if ((m_slot_ndr_cnt == 2 && m_slot_drs_cnt == 1) ||
+            (m_slot_ndr_cnt == 0 && m_slot_drs_cnt == 3) ||
+            (m_slot_ndr_cnt == 2 && m_slot_drs_cnt == 0)) {
+          m_slot_ndr_cnt = 0;
+          m_slot_drs_cnt = 0;
+        }
+      }
     }
   }
 
-  // insert to replay buffer
-  if (new_flit) {
-    new_flit->m_txdll_end = m_cycle + *KNOB(KNOB_PCIE_TXDLL_LATENCY);
-    m_txreplay_buff.push_back(new_flit);
+  // insert to replay buffer if a new flit is made
+  if (m_cur_flit && 
+      ((m_flit_wait_cycle == m_max_flit_wait) || (m_slot_cnt == max_msg_per_flit))) {
+    m_cur_flit->m_txdll_end = m_cycle + *KNOB(KNOB_PCIE_TXDLL_LATENCY);
+    m_txreplay_buff.push_back(m_cur_flit);
+
+    m_cur_flit = NULL;
+    m_flit_wait_cycle = 0;
+
+    m_flit_ndr_cnt = 0;
+    m_flit_drs_cnt = 0;
+    m_slot_ndr_cnt = 0;
+    m_slot_drs_cnt = 0;
+
+    m_slot_cnt = 0;
   }
 }
 
@@ -550,12 +606,19 @@ void pcie_ep_c::print_ep_info() {
     std::cout << "======== TXVC[" << ii << "]" << std::endl;
     for (auto msg : m_txvc_buff[ii]) {
       msg->print();
+      std::cout << std::endl;
     }
   }
 
   std::cout << "======== TXDLL" << std::endl;
   for (auto msg : m_txdll_q) {
     msg->print();
+    std::cout << std::endl;
+  }
+
+  std::cout << "======= Cur Req" << std::endl;
+  if (m_cur_flit) {
+    m_cur_flit->print();
   }
 
   std::cout << "======= Replay buff" << std::endl;
@@ -572,6 +635,7 @@ void pcie_ep_c::print_ep_info() {
     std::cout << "======== RXVC[" << ii << "]" << std::endl;
     for (auto msg : m_rxvc_buff[ii]) {
       msg->print();
+      std::cout << std::endl;
     }
   }
 }
