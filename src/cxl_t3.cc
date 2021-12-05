@@ -175,8 +175,8 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 
 // ramulator read callback
 void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
-  if (*KNOB(KNOB_DEBUG_IO_SYS)) {
-    printf("Read to 0x%lx completed.\n", ramu_req.addr);
+  if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+    printf("CXL RAM read callback done: 0x%lx\n", ramu_req.addr);
   }
 
   auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
@@ -190,8 +190,8 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
 
 // ramulator write callback
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
-  if (*KNOB(KNOB_DEBUG_IO_SYS)) {
-    printf("Write to 0x%lx completed.\n", ramu_req.addr);
+  if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+    printf("CXL RAM write callback done: 0x%lx\n", ramu_req.addr);
   }
 
   auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;

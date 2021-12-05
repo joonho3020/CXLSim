@@ -113,6 +113,12 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
   if (m_rc->rootcomplex_full()) {
     return false;
   } else {
+    if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+      std::cout << "==== Insert req to MXP"
+        << std::hex << " Addr: " << addr
+        << std::dec << " write: " << write << std::endl;
+    }
+
     cxl_req_s* new_req = m_req_pool->acquire_entry(this);
     new_req->m_addr = addr;
     new_req->m_write = write;
@@ -260,6 +266,11 @@ void cxlsim_c::init_clock_domain() {
 void cxlsim_c::request_done(cxl_req_s* req) {
   // call registered callback function if it has one
   if (m_trans_done_cb) {
+    if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+      std::cout << "CXL Req Done: "
+                << std::hex << "Addr: " << req->m_addr << " " 
+                << std::dec << "Write: " << req->m_write << " " << std::endl;
+    }
     (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
 
