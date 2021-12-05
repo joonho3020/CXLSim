@@ -515,7 +515,7 @@ void pcie_ep_c::process_txdll() {
 
   // insert to replay buffer if a new flit is made
   if (m_cur_flit && 
-      ((m_flit_wait_cycle == m_max_flit_wait) || (m_slot_cnt == max_msg_per_flit))) {
+      ((m_flit_wait_cycle >= m_max_flit_wait) || (m_slot_cnt == max_msg_per_flit))) {
     m_cur_flit->m_txdll_end = m_cycle + *KNOB(KNOB_PCIE_TXDLL_LATENCY);
     m_txreplay_buff.push_back(m_cur_flit);
 
