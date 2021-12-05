@@ -156,7 +156,9 @@ void KnobsContainer::applyValuesToKnobs(
   std::map<std::string, abstract_knob_c*, ltstr_s>::iterator knob_end = m_theKnobs.end();
   while (knob_iter != knob_end) {
     pKnob = (abstract_knob_c*)(knob_iter->second);
-    if (!pKnob->getParentName().empty() &&
+    if (pKnob == NULL) {
+      // do nothing
+    } else if (!pKnob->getParentName().empty() &&
         m_theKnobs[pKnob->getParentName()]->wasValueProvided() &&
         !pKnob->wasValueProvided()) {
       pKnob->initFromString(
