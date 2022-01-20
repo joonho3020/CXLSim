@@ -12,7 +12,7 @@ pcie_lanes 16
 pcie_per_lane_bw 32
 
 # Don't touch
-pcie_vc_cnt 2
+pcie_vc_cnt 4
 
 # Capacity params
 pcie_txvc_capacity 8
@@ -38,6 +38,7 @@ pcie_req_msg_bits 87
 pcie_rwd_msg_bits 87
 pcie_ndr_msg_bits 30
 pcie_drs_msg_bits 40
+pcie_uop_msg_bits 64
 
 # Flit wait cycles
 pcie_max_flit_wait_cycle 2

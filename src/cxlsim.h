@@ -78,16 +78,21 @@ public:
   void init(int argc, char **argv);
 
   /** 
-   * callback function register
+   * memory req callback function register
   */
-  void register_callback(callback_t* fn);
+  void register_memreq_callback(callback_t* fn);
+
+  /**
+   * uop req callback function register
+   */
+  void register_uopreq_callback(callback_t* fn);
 
   /**
    * insert a request to the CXL mem 
    * - it can take a arbitrary pointer type of the outer simulator (void* req)
    *   and return it by the registered callback function
    */
-  bool insert_request(Addr addr, bool write, void* req);
+  bool insert_request(Addr addr, bool write, bool uop, void* req);
 
   /**
    * Tick a cycle
@@ -134,7 +139,8 @@ private:
   pool_c<message_s>* m_msg_pool; /**< memory pool for messages */
   pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
 
-  callback_t* m_trans_done_cb; /* callback function for the outer simultor */
+  callback_t* m_mem_trans_done_cb; /* memory callback fn for the outer simultor */
+  callback_t* m_uop_trans_done_cb; /* uop callback fn for the outer simulator */
 
   int m_clock_lcm;    /**< lcm of clock domains */
   int *m_domain_freq;

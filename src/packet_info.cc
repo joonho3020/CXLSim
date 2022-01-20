@@ -54,6 +54,7 @@ void cxl_req_s::init(void) {
   m_id = 0;
   m_addr = 0;
   m_write = false;
+  m_uop = false;
   m_req = NULL;
 }
 
@@ -93,7 +94,8 @@ void message_s::print(void) {
   Addr addr = m_req ? m_req->m_addr : 0x00;
   std::string msg_type = m_data ? "DATA" 
                                 : (m_vc_id == WD_CHANNEL) ? "WDATA"
-                                                          : "WODATA";
+                                : (m_vc_id == UOP_CHANNEL) ? "UOP"
+                                : "WODATA";
 
   std::cout << " | <MSG> addr: " << std::hex << addr
                 << " channel: " << msg_type;

@@ -52,6 +52,7 @@ namespace cxlsim {
 #define WOD_CHANNEL 0
 #define WD_CHANNEL 1
 #define DATA_CHANNEL 2
+#define UOP_CHANNEL 3
 
 class pcie_ep_c {
 public:

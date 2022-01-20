@@ -99,6 +99,10 @@ private:
   void process_pending_req();
 
   /**
+   * Process pending uops
+   */
+  void process_pending_uops();
+  /**
    * Push request to ramulator
    */
   bool push_ramu_req(cxl_req_s* req);
@@ -127,6 +131,8 @@ private:
   std::function<void(ramulator::Request &)> m_write_cb_func;
 
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
+
+  std::list<cxl_req_s*> m_uop_queue; /**< uops to be processed */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
 };

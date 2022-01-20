@@ -49,9 +49,10 @@ core_req_s::core_req_s() {
   init();
 }
 
-core_req_s::core_req_s(Addr addr, bool write) {
+core_req_s::core_req_s(Addr addr, bool write, bool uop) {
   m_addr = addr;
   m_write = write;
+  m_uop = uop;
 }
 
 void core_req_s::init() {
@@ -66,10 +67,14 @@ core_c::core_c(cxlsim_c* simBase) {
   m_return_reqs = 0;
   m_insert_reqs = 0;
 
-  callback_t *trans_callback = 
-    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_callback);
+  callback_t *mem_callback = 
+    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_mem_callback);
 
-  m_simBase->register_callback(trans_callback);
+  callback_t *uop_callback =
+    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_uop_callback);
+
+  m_simBase->register_memreq_callback(mem_callback);
+  m_simBase->register_uopreq_callback(uop_callback);
 }
 
 core_c::~core_c() {
@@ -80,10 +85,10 @@ void core_c::set_tracefile(std::string filename) {
   m_tracefilename = filename;
 }
 
-void core_c::insert_request(Addr addr, bool write) {
-  core_req_s* new_req = new core_req_s(addr, write);
+void core_c::insert_request(Addr addr, bool write, bool uop) {
+  core_req_s* new_req = new core_req_s(addr, write, uop);
 
-  if (m_simBase->insert_request(addr, write, (void*)new_req)) {
+  if (m_simBase->insert_request(addr, write, uop, (void*)new_req)) {
     // do nothing
   } else {
     m_pending_q.push_back(new_req);
@@ -92,7 +97,7 @@ void core_c::insert_request(Addr addr, bool write) {
   // debug messages
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== insert core req =================================" << std::endl;
-    std::cout << m_insert_reqs << " " << addr << " " << write << " " << new_req << std::endl;
+    std::cout << m_insert_reqs << " " << addr << " " << write << " " << " " << (uop ? 1 : 0) << " " << new_req << std::endl;
     m_insert_reqs++;
   }
 }
@@ -101,7 +106,7 @@ void core_c::run_a_cycle(bool pll_locked) {
   // if the pending_q is not empty insert one req into cxl every cycle
   if (!m_pending_q.empty()) {
     core_req_s* req = m_pending_q.front();
-    if(m_simBase->insert_request(req->m_addr, req->m_write, (void*)req)) {
+    if(m_simBase->insert_request(req->m_addr, req->m_write, req->m_uop, (void*)req)) {
       m_pending_q.pop_front();
     }
   }
@@ -120,10 +125,13 @@ void core_c::run_sim() {
         Addr addr;
         int type;
         bool write;
+        bool uop;
 
         std::sscanf(line.c_str(), "%llx %d", &addr, &type);
         write = (type == 1);
-        insert_request(addr, write);
+        uop = (type == 2);
+       
+        insert_request(addr, write, uop);
         tot_reqs++;
       }
     file.close();
@@ -135,9 +143,9 @@ void core_c::run_sim() {
   }
 }
 
-void core_c::core_callback(Addr addr, bool write, void *req) {
+void core_c::core_mem_callback(Addr addr, bool write, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
-    std::cout << "======================== core callback =================================" << std::endl;
+    std::cout << "======================== mem callback =================================" << std::endl;
     std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;
   }
 
@@ -148,5 +156,20 @@ void core_c::core_callback(Addr addr, bool write, void *req) {
   m_return_reqs++;
   delete cur_req;
 }
+
+void core_c::core_uop_callback(Addr addr, bool write, void *req) {
+  if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+    std::cout << "======================== uop callback =================================" << std::endl;
+    std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;
+  }
+
+  core_req_s* cur_req = static_cast<core_req_s*>(req);
+  assert(addr == cur_req->m_addr);
+  assert(write == cur_req->m_write);
+
+  m_return_reqs++;
+  delete cur_req;
+}
+
 
 } // namespace CXL

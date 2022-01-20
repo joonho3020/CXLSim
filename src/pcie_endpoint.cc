@@ -73,7 +73,7 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_txvc_buff = new std::list<message_s*>[m_vc_cnt];
   m_rxvc_buff = new std::list<message_s*>[m_vc_cnt];
 
-  ASSERTM(m_vc_cnt == 2, "currently only 2 virtual channels exist\n");
+  ASSERTM(m_vc_cnt == 4, "currently only 4 virtual channels exist\n");
 
   m_flit_ndr_cnt = 0;
   m_flit_drs_cnt = 0;
@@ -193,6 +193,10 @@ void pcie_ep_c::init_new_msg(message_s* msg, int vc_id, cxl_req_s* req) {
         msg->m_type = M2S_DATA;
         msg->m_bits = *KNOB(KNOB_PCIE_DATA_MSG_BITS);
         break;
+      case UOP_CHANNEL:
+        msg->m_type = M2S_UOP;
+        msg->m_bits = *KNOB(KNOB_PCIE_UOP_MSG_BITS);
+        break;
       default:
         assert(0);
         break;
@@ -210,6 +214,10 @@ void pcie_ep_c::init_new_msg(message_s* msg, int vc_id, cxl_req_s* req) {
       case DATA_CHANNEL:
         msg->m_type = S2M_DATA;
         msg->m_bits = *KNOB(KNOB_PCIE_DATA_MSG_BITS);
+        break;
+      case UOP_CHANNEL:
+        msg->m_type = S2M_UOP;
+        msg->m_bits = *KNOB(KNOB_PCIE_UOP_MSG_BITS);
         break;
       default:
         assert(0);
@@ -310,10 +318,15 @@ bool pcie_ep_c::push_txvc(cxl_req_s* cxl_req) {
 
   assert(cxl_req);
 
+  // FIXME : some smart way of coding channels... this is getting messy
   if (m_master) {
-    channel = (cxl_req && cxl_req->m_write) ? WD_CHANNEL : WOD_CHANNEL;
+    channel = cxl_req->m_uop ? UOP_CHANNEL
+                : cxl_req->m_write ? WD_CHANNEL
+                  : WOD_CHANNEL;
   } else {
-    channel = (cxl_req && !cxl_req->m_write) ? WD_CHANNEL : WOD_CHANNEL;
+    channel = cxl_req->m_uop ? UOP_CHANNEL
+                : cxl_req->m_write ? WOD_CHANNEL
+                  : WD_CHANNEL;
   }
 
   if (!txvc_not_full(channel)) { // txvc full
@@ -354,6 +367,7 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
 
   sort(candidate.begin(), candidate.end());
 
+  // pull from the vc with least remaining entries
   for (auto cand : candidate) {
     int vc_id = cand.second;
 
@@ -362,6 +376,7 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
     if (msg->m_rxtrans_end > m_cycle) {
       continue;
     } else {
+      // if the message is not ready, continue
       if (is_wdata_msg(msg) && 
           msg->m_arrived_child != *KNOB(KNOB_PCIE_MAX_MSG_PER_FLIT)) {
         continue;
@@ -375,6 +390,7 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
       if (is_wdata_msg(msg)) {
         assert((int)msg->m_childs.size() != 0);
 
+        // free the associated data messages
         for (auto child : msg->m_childs) {
           // update stats
           STAT_EVENT(PCIE_RXTRANS_BASE);
@@ -441,12 +457,12 @@ void pcie_ep_c::process_txtrans() {
   m_txvc_rr_idx = (m_txvc_rr_idx + 1) % m_vc_cnt;
 }
 
-// FIXME
+// FIXME (Done)
 // - Currently we are making flits as messages come.
 // - However, it may be better to wait for comming messages to form a single flit
 // - as it can save bandwidth.
 // - On the otherhand, if implemented wrongly, it can lengthen the packet latency.
-// FIXME 2
+// FIXME 2 (Done)
 // - Currently, only one message can fit into a flit slot.
 // - However, for response messages, multiple messages can fit into a slot.
 // - Need to impelement this part to save BW.
@@ -487,8 +503,11 @@ void pcie_ep_c::process_txdll() {
       }
       m_cur_flit->m_msgs.push_back(msg);
 
+      // FIXME : Currently, there is no specification about instruction offloading
+      // Just assume that uops takes a single slot
       if (msg->m_type == M2S_REQ  || msg->m_type == M2S_RWD || 
-          msg->m_type == M2S_DATA || msg->m_type == S2M_DATA) { // takes one slot
+          msg->m_type == M2S_DATA || msg->m_type == S2M_DATA ||
+          msg->m_type == M2S_UOP || msg->m_type == S2M_UOP) { // takes one slot
         m_slot_cnt++;
       } else { // multiple messages fit in a slot
         if (m_slot_ndr_cnt == 0 && m_slot_drs_cnt == 0) {

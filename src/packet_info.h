@@ -58,6 +58,7 @@ typedef struct cxl_req_s {
   Counter m_id;
   Addr m_addr;
   bool m_write;
+  bool m_uop;
   void* m_req;
   cxlsim_c* m_simBase;
 } cxl_req_s;
@@ -68,9 +69,11 @@ typedef enum MSG_TYPE {
   M2S_REQ = 0,
   M2S_RWD,
   M2S_DATA,
+  M2S_UOP,
   S2M_NDR,
   S2M_DRS,
   S2M_DATA,
+  S2M_UOP,
   INVALID
 } MSG_TYPE;
 

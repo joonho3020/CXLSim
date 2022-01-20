@@ -51,11 +51,12 @@ namespace cxlsim {
 // example message struct sent from core to cxl
 typedef struct core_req_s {
   core_req_s();
-  core_req_s(Addr addr, bool write);
+  core_req_s(Addr addr, bool write, bool uop);
   void init();
 
   Addr m_addr;
   bool m_write;
+  bool m_uop;
 } core_req_s;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -67,12 +68,13 @@ public:
   ~core_c();
 
   void set_tracefile(std::string filename);
-  void insert_request(Addr addr, bool write);
+  void insert_request(Addr addr, bool write, bool uop);
   void run_a_cycle(bool pll_locked);
   void run_sim();
 
 private:
-  void core_callback(Addr addr, bool write, void *req);
+  void core_mem_callback(Addr addr, bool write, void *req);
+  void core_uop_callback(Addr addr, bool write, void *req);
 
 public:
   // for debugging

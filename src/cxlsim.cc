@@ -76,7 +76,8 @@ cxlsim_c::cxlsim_c() {
   m_req_pool = new pool_c<cxl_req_s>;
   m_msg_pool = new pool_c<message_s>;
   m_flit_pool = new pool_c<flit_s>;
-  m_trans_done_cb = NULL;
+  m_mem_trans_done_cb = NULL;
+  m_uop_trans_done_cb = NULL;
 
   // clock domain
   m_clock_lcm = 1;
@@ -104,12 +105,16 @@ void cxlsim_c::init(int argc, char** argv) {
   init_clock_domain();
 }
 
-void cxlsim_c::register_callback(callback_t* fn) {
-  m_trans_done_cb = fn;
+void cxlsim_c::register_memreq_callback(callback_t* fn) {
+  m_mem_trans_done_cb = fn;
+}
+
+void cxlsim_c::register_uopreq_callback(callback_t* fn) {
+  m_uop_trans_done_cb = fn;
 }
 
 // accept request from the outside simulator
-bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
+bool cxlsim_c::insert_request(Addr addr, bool write, bool uop, void* req) {
   if (m_rc->rootcomplex_full()) {
     return false;
   } else {
@@ -122,6 +127,7 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
     cxl_req_s* new_req = m_req_pool->acquire_entry(this);
     new_req->m_addr = addr;
     new_req->m_write = write;
+    new_req->m_uop = uop;
     new_req->m_req = req;
 
     m_rc->insert_request(new_req);
@@ -265,13 +271,21 @@ void cxlsim_c::init_clock_domain() {
 
 void cxlsim_c::request_done(cxl_req_s* req) {
   // call registered callback function if it has one
-  if (m_trans_done_cb) {
+  if (m_uop_trans_done_cb && req->m_uop) {
+    if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+      std::cout << "CXL UOP Req Done: " << std::endl;
+      (*m_uop_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
+    }
+  }
+  else if (m_mem_trans_done_cb) {
+    assert(!req->m_uop);
+
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "CXL Req Done: "
                 << std::hex << "Addr: " << req->m_addr << " " 
                 << std::dec << "Write: " << req->m_write << " " << std::endl;
     }
-    (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
+    (*m_mem_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
 
   // release cxl request entry

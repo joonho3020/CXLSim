@@ -85,6 +85,9 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   process_txtrans();
   start_transaction();
 
+  // process pending uops
+  process_pending_uops();
+
   // process memory requests
   process_pending_req();
 
@@ -138,13 +141,32 @@ void cxlt3_c::process_pending_req() {
   std::vector<cxl_req_s*> tmp_list;
   for (auto I = m_pending_req->begin(); I != m_pending_req->end(); I++) {
     cxl_req_s* req = *I;
-    if (push_ramu_req(req)) {
+
+    if (req->m_uop) {
+      m_uop_queue.push_back(req);
+      tmp_list.push_back(req);
+    } else if (push_ramu_req(req)) {
       tmp_list.push_back(req);
     }
   }
 
   for (auto I = tmp_list.begin(), end = tmp_list.end(); I != end; ++I) {
     m_pending_req->remove(*I);
+  }
+}
+
+// TODO : use uops from m_uop_queue and process them
+void cxlt3_c::process_pending_uops() {
+  std::vector<cxl_req_s*> tmp_list;
+  for (auto it = m_uop_queue.begin(); it != m_uop_queue.end(); it++) {
+    cxl_req_s* req = *it;
+
+    m_mxp_resp_queue.push_back(req);
+    tmp_list.push_back(req);
+  }
+
+  for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
+    m_uop_queue.remove(*it);
   }
 }
 
