@@ -274,8 +274,8 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   if (m_uop_trans_done_cb && req->m_uop) {
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "CXL UOP Req Done: " << std::endl;
-      (*m_uop_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
     }
+    (*m_uop_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
   else if (m_mem_trans_done_cb) {
     assert(!req->m_uop);
