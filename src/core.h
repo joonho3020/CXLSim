@@ -78,8 +78,11 @@ private:
 
 public:
   // for debugging
-  Counter m_insert_reqs;
-  Counter m_return_reqs;
+  Counter m_mem_insert_reqs;
+  Counter m_mem_return_reqs;
+
+  Counter m_uop_insert_reqs;
+  Counter m_uop_return_reqs;
 
   // simbase
   cxlsim_c* m_simBase;

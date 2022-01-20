@@ -39,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "all_knobs.h"
 #include "cxlsim.h"
+#include "assert_macros.h"
 #include "core.h"
 
 namespace cxlsim {
@@ -64,8 +65,10 @@ void core_req_s::init() {
 
 core_c::core_c(cxlsim_c* simBase) {
   m_simBase = simBase;
-  m_return_reqs = 0;
-  m_insert_reqs = 0;
+  m_mem_insert_reqs = 0;
+  m_mem_return_reqs = 0;
+  m_uop_insert_reqs = 0;
+  m_uop_return_reqs = 0;
 
   callback_t *mem_callback = 
     new Callback<core_c, void, Addr, bool, void*> (&(*this),  &core_c::core_mem_callback);
@@ -96,9 +99,11 @@ void core_c::insert_request(Addr addr, bool write, bool uop) {
   // debug messages
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== insert core req =================================" << std::endl;
-    std::cout << m_insert_reqs << " " << addr << " " << write << " " << " " << (uop ? 1 : 0) << " " << new_req << std::endl;
-    m_insert_reqs++;
+    std::cout << addr << " " << write << " " << " " << (uop ? 1 : 0) << " " << new_req << std::endl;
   }
+
+  if (uop) m_uop_insert_reqs++;
+  else m_mem_insert_reqs++;
 }
 
 void core_c::run_a_cycle(bool pll_locked) {
@@ -138,36 +143,41 @@ void core_c::run_sim() {
   }
 
   // run simulation
-  while (m_return_reqs < tot_reqs) {
+  while (m_mem_return_reqs + m_uop_return_reqs < tot_reqs) {
     run_a_cycle(false);
   }
+
+  ASSERTM(m_mem_return_reqs == m_mem_insert_reqs, "Unit test failed : Some mem reqs not returning");
+  ASSERTM(m_uop_return_reqs == m_uop_insert_reqs, "Unit test failed : Some uop reqs not returning");
+
+  std::cout << "Unit test success" << std::endl;
 }
 
 void core_c::core_mem_callback(Addr addr, bool write, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== mem callback =================================" << std::endl;
-    std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;
+    std::cout << m_mem_return_reqs << " " << addr << " " << write << " " << req << std::endl;
   }
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
   assert(addr == cur_req->m_addr);
   assert(write == cur_req->m_write);
 
-  m_return_reqs++;
+  m_mem_return_reqs++;
   delete cur_req;
 }
 
 void core_c::core_uop_callback(Addr addr, bool write, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== uop callback =================================" << std::endl;
-    std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;
+    std::cout << m_uop_return_reqs << " " << addr << " " << write << " " << req << std::endl;
   }
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
   assert(addr == cur_req->m_addr);
   assert(write == cur_req->m_write);
 
-  m_return_reqs++;
+  m_uop_return_reqs++;
   delete cur_req;
 }
 
