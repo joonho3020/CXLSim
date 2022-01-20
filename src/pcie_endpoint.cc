@@ -62,7 +62,6 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_peer_ep = NULL;
 
   ASSERTM((m_lanes & (m_lanes - 1)) == 0, "number of lanes should be power of 2\n");
-
   m_txvc_rr_idx = 0;
 
   // initialize VC buffers & credit
@@ -73,7 +72,7 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_txvc_buff = new std::list<message_s*>[m_vc_cnt];
   m_rxvc_buff = new std::list<message_s*>[m_vc_cnt];
 
-  ASSERTM(m_vc_cnt == 4, "currently only 4 virtual channels exist\n");
+  ASSERTM(m_vc_cnt == MAX_CHANNEL, "currently only 4 virtual channels exist\n");
 
   m_flit_ndr_cnt = 0;
   m_flit_drs_cnt = 0;
@@ -147,7 +146,7 @@ bool pcie_ep_c::phys_layer_full() {
 }
 
 void pcie_ep_c::insert_phys(flit_s* flit) {
-  assert(!phys_layer_full());
+  ASSERTM(!phys_layer_full(), "physical layer should not be full");
   m_rxphys_q.push_back(flit);
 }
 
@@ -241,11 +240,13 @@ void pcie_ep_c::parse_and_insert_flit(flit_s* flit) {
 
   for (auto msg : flit->m_msgs) {
     if (msg->m_data) {
-      assert(msg->m_parent);
+      ASSERTM(msg->m_parent, "Data message should have a parent req");
+
       msg->m_parent->m_arrived_child++;
     } else {
       int vc_id = msg->m_vc_id;
-      assert(m_rxvc_cap > (int)m_rxvc_buff[vc_id].size()); // flow control
+      ASSERTM(m_rxvc_cap > (int)m_rxvc_buff[vc_id].size(),
+              "Due to flow control, rxvc should always have free space");
 
       msg->m_rxtrans_end = m_cycle + *KNOB(KNOB_PCIE_RXTRANS_LATENCY);
       m_rxvc_buff[vc_id].push_back(msg);
@@ -258,8 +259,8 @@ void pcie_ep_c::parse_and_insert_flit(flit_s* flit) {
     STAT_EVENT(PCIE_RXDLL_BASE);
     STAT_EVENT_N(AVG_PCIE_RXDLL_LATENCY, m_cycle - rxdll_start);
   }
-  flit->init();
-  m_flit_pool->release_entry(flit);
+
+  release_flit(flit);
 }
 
 void pcie_ep_c::refresh_replay_buffer() {
@@ -301,6 +302,22 @@ void pcie_ep_c::add_and_push_data_msg(message_s* msg) {
   }
 }
 
+int pcie_ep_c::get_channel(cxl_req_s* req) {
+  if (req->m_uop) return UOP_CHANNEL;
+  else if (req->m_write) return m_master ? WD_CHANNEL : WOD_CHANNEL;
+  else return m_master ? WOD_CHANNEL : WD_CHANNEL;
+}
+
+void pcie_ep_c::release_flit(flit_s* flit) {
+  flit->init();
+  m_flit_pool->release_entry(flit);
+}
+
+void pcie_ep_c::release_msg(message_s* msg) {
+  msg->init();
+  m_msg_pool->release_entry(msg);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // protected
 
@@ -313,22 +330,10 @@ void pcie_ep_c::start_transaction() {
 
 // used for start_transaction
 bool pcie_ep_c::push_txvc(cxl_req_s* cxl_req) {
-  message_s* new_msg;
-  int channel;
-
   assert(cxl_req);
+  int channel = get_channel(cxl_req);;
 
-  // FIXME : some smart way of coding channels... this is getting messy
-  if (m_master) {
-    channel = cxl_req->m_uop ? UOP_CHANNEL
-                : cxl_req->m_write ? WD_CHANNEL
-                  : WOD_CHANNEL;
-  } else {
-    channel = cxl_req->m_uop ? UOP_CHANNEL
-                : cxl_req->m_write ? WOD_CHANNEL
-                  : WD_CHANNEL;
-  }
-
+  message_s* new_msg;
   if (!txvc_not_full(channel)) { // txvc full
     return false;
   } else {
@@ -396,16 +401,15 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
           STAT_EVENT(PCIE_RXTRANS_BASE);
           STAT_EVENT_N(AVG_PCIE_RXTRANS_LATENCY, m_cycle - child->m_rxvc_start);
 
-          child->init();
-          m_msg_pool->release_entry(child);
+          release_msg(child);
         }
       }
+
       // update stats
       STAT_EVENT(PCIE_RXTRANS_BASE);
       STAT_EVENT_N(AVG_PCIE_RXTRANS_LATENCY, m_cycle - msg->m_rxvc_start);
 
-      msg->init();
-      m_msg_pool->release_entry(msg);
+      release_msg(msg);
 
       return mem_req;
     }

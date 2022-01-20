@@ -68,10 +68,9 @@ core_c::core_c(cxlsim_c* simBase) {
   m_insert_reqs = 0;
 
   callback_t *mem_callback = 
-    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_mem_callback);
-
+    new Callback<core_c, void, Addr, bool, void*> (&(*this),  &core_c::core_mem_callback);
   callback_t *uop_callback =
-    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_uop_callback);
+    new Callback<core_c, void, Addr, bool, void*> (&(*this), &core_c::core_uop_callback);
 
   m_simBase->register_memreq_callback(mem_callback);
   m_simBase->register_uopreq_callback(uop_callback);
@@ -106,7 +105,8 @@ void core_c::run_a_cycle(bool pll_locked) {
   // if the pending_q is not empty insert one req into cxl every cycle
   if (!m_pending_q.empty()) {
     core_req_s* req = m_pending_q.front();
-    if(m_simBase->insert_request(req->m_addr, req->m_write, req->m_uop, (void*)req)) {
+    if(m_simBase->insert_request(req->m_addr, req->m_write, 
+                                 req->m_uop, (void*)req)) {
       m_pending_q.pop_front();
     }
   }

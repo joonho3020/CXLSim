@@ -80,7 +80,8 @@ void pcie_rc_c::start_transaction() {
     }
   }
 
-  for (auto iter = tmp_list.begin(), end = tmp_list.end(); iter != end; ++iter) {
+  for (auto iter = tmp_list.begin(), end = tmp_list.end(); iter != end; 
+      ++iter) {
     m_pending_req.remove(*iter);
   }
 }

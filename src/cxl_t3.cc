@@ -182,7 +182,6 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 
   if (accepted) {
     if (is_write) {
-      // FIXME : fix this it req->m_id
       m_mxp_writes[ramu_req.addr].push_back(req);
     } else {
       m_mxp_reads[ramu_req.addr].push_back(req);

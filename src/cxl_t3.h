@@ -120,18 +120,17 @@ private:
 private:
   // mxp queues
   unsigned int m_mxp_requestsInFlight;
-  std::map<long, std::list<cxl_req_s*>> m_mxp_reads;
-  std::map<long, std::list<cxl_req_s*>> m_mxp_writes;
-  std::list<cxl_req_s*> m_mxp_resp_queue;
+  std::map<long, std::list<cxl_req_s*>> m_mxp_reads; /**< rd reqs waiting for ramu callback */
+  std::map<long, std::list<cxl_req_s*>> m_mxp_writes; /**< wr reqs waiting for ramu callback */
+  std::list<cxl_req_s*> m_mxp_resp_queue; /**< resp returned from ramu */
 
   // members for ramulator
-  ramulator::Config configs;
-  ramulator::CXLRamulatorWrapper *m_ramu_wrapper;
-  std::function<void(ramulator::Request &)> m_read_cb_func;
-  std::function<void(ramulator::Request &)> m_write_cb_func;
+  ramulator::Config configs; /**< ramulator configs */
+  ramulator::CXLRamulatorWrapper *m_ramu_wrapper; /**< ramulator wrapper */
+  std::function<void(ramulator::Request &)> m_read_cb_func;  /**< ramulator read callback*/
+  std::function<void(ramulator::Request &)> m_write_cb_func; /**< ramulator write callback */
 
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
-
   std::list<cxl_req_s*> m_uop_queue; /**< uops to be processed */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */

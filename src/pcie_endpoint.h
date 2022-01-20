@@ -37,6 +37,55 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef PCIE_EP_H
 #define PCIE_EP_H
 
+/* PCIe overview
+ * |-------------|                         |-------------|
+ * |  vc1   vc2  |                         |             | 
+ * | |msg| |msg| |                         |             |
+ * | |msg| |msg| |                         |             |
+ * | |msg| |msg| |                         |             |
+ * | |---| |---| |                         |   RX trans  |
+ * |  TX trans   |                         |             |
+ * |-------------|                         |-------------|
+ * | replay buff |                         |             |
+ * |  |-------|  |                         |             |
+ * |  | flit  |  |                         |             |
+ * |  | flit  |  |                         |             |
+ * |  |-------|  |                         |             |
+ * |             |                         |             |
+ * |             |                         |             |
+ * |   TX dll    |                         |   RX dll    |
+ * |-------------|                         |-------------|
+ *        |                                       |
+ *        | TX phys     ---- flit --->   RX phys  | 
+ *        |---------------------------------------|
+ *        |---------------------------------------|
+ * 
+ *
+ * Flit & slot & message
+ * - A flit consists of 4 slots
+ * - Each slot can contain 1 ~ 3 messages
+ * - See CXL spec 2.0 for more information
+ *
+ * Flit
+ * |--------|--------|--------|--------|
+ * | Slot 0 | Slot 1 | Slot 2 | Slot 3 |
+ * |--------|--------|--------|--------|
+ *
+ * Types of messages
+ *
+ * - Request
+ *   - REQ : Request (used as read requests)
+ *   - RWD : Request with data (used as write requests)
+ * - Response
+ *   - NDR : No data response (used as write ack)
+ *   - DRS : Data response (used as read response)
+ * - Data
+ *   - Sent with RWD to write to MXP
+ *   - Sent with DRS as a response to read requests
+ * - UOP
+ *   - For NDP
+ */
+
 
 #include <list>
 #include <deque>
@@ -49,10 +98,13 @@ namespace cxlsim {
 #define TX true
 #define RX false
 
-#define WOD_CHANNEL 0
-#define WD_CHANNEL 1
-#define DATA_CHANNEL 2
-#define UOP_CHANNEL 3
+typedef enum channel_type {
+  WOD_CHANNEL= 0, /**< req/resp without data */
+  WD_CHANNEL,     /**< req/resp with data */
+  DATA_CHANNEL,   /**< data */
+  UOP_CHANNEL,    /**< uop */
+  MAX_CHANNEL
+} channel_type;
 
 class pcie_ep_c {
 public:
@@ -142,6 +194,22 @@ private:
    */
   void add_and_push_data_msg(message_s* msg);
 
+  /*
+   * Return channel number for current request
+   */
+  int get_channel(cxl_req_s* req);
+
+  /*
+   * Release flit
+   */
+  void release_flit(flit_s* flit);
+
+  /*
+   * Release msg
+   */
+  void release_msg(message_s* msg);
+
+
 protected:
   /**
    * Start PCIe transaction by inserting requests
@@ -190,24 +258,24 @@ private:
   float m_perlane_bw; /**< PCIe per lane BW in GT/s */
   Counter m_prev_txphys_cycle; /**< finish cycle of previously sent packet */
 
-  int m_txvc_rr_idx; /** round robin id */
+  int m_txvc_rr_idx; /**< round robin id */
   int m_vc_cnt; /**< VC number */
   int m_txvc_cap; /**< VC buffer capacity */
   int m_rxvc_cap; /**< VC buffer capacity */
   std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
   std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
 
-  int m_flit_ndr_cnt;
-  int m_flit_drs_cnt;
-  int m_slot_ndr_cnt;
-  int m_slot_drs_cnt;
+  int m_flit_ndr_cnt; /**< NDR req count for current flit */
+  int m_flit_drs_cnt; /**< DRS req count for current flit */
+  int m_slot_ndr_cnt; /**< NDR req count for current slot */
+  int m_slot_drs_cnt; /**< DRS req count for currnet slot */
 
-  int m_slot_cnt;
+  int m_slot_cnt; /**< slot used for current flit */
 
-  int m_max_flit_wait;
-  int m_flit_wait_cycle;
+  int m_max_flit_wait; /**< max cycles waiting before flit starts phys */
+  int m_flit_wait_cycle; /**< cycles that pending flit waited */
 
-  flit_s* m_cur_flit;
+  flit_s* m_cur_flit; /**< flit pending to be sent */
 
   int m_txdll_cap; /**< dll layer queue capacity */
   std::list<message_s*> m_txdll_q; /**< dll layer queue */
