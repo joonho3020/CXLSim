@@ -46,6 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxlsim.h"
 #include "pcie_endpoint.h"
 #include "packet_info.h"
+#include "../../uop.h"
 
 #include "ramulator_wrapper.h"
 #include "ramulator/src/Request.h"
@@ -134,7 +135,9 @@ private:
   std::list<cxl_req_s*> m_uop_queue; /**< uops to be processed */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
+
+  int m_latency[NUM_UOP_TYPES];
 };
 
 } //namespace ramulator
-#endif //CXLT3_H
+rendif //CXLT3_H
