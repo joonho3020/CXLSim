@@ -140,4 +140,4 @@ private:
 };
 
 } //namespace ramulator
-rendif //CXLT3_H
+#endif //CXLT3_H
