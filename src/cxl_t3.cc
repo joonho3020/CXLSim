@@ -142,7 +142,7 @@ void cxlt3_c::process_pending_req() {
   for (auto I = m_pending_req->begin(); I != m_pending_req->end(); I++) {
     cxl_req_s* req = *I;
 
-    if (req->m_uop) {
+    if (req->m_isuop) {
       m_uop_queue.push_back(req);
       tmp_list.push_back(req);
     } else if (push_ramu_req(req)) {

@@ -21,6 +21,7 @@ template <class T> class pool_c;
 template <typename T> class knob_c;
 
 // structs
+typedef struct uop_s uop_s;
 typedef struct cxl_req_s cxl_req_s;
 typedef struct message_s message_s;
 typedef struct flit_s flit_s;

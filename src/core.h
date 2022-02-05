@@ -56,7 +56,7 @@ typedef struct core_req_s {
 
   Addr m_addr;
   bool m_write;
-  bool m_uop;
+  bool m_isuop;
 } core_req_s;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -88,6 +88,7 @@ public:
   cxlsim_c* m_simBase;
 
 private:
+  Counter m_unique_num;
   std::string m_tracefilename;
   std::list<core_req_s*> m_pending_q;
 };

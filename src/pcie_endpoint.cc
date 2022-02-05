@@ -303,7 +303,7 @@ void pcie_ep_c::add_and_push_data_msg(message_s* msg) {
 }
 
 int pcie_ep_c::get_channel(cxl_req_s* req) {
-  if (req->m_uop) return UOP_CHANNEL;
+  if (req->m_isuop) return UOP_CHANNEL;
   else if (req->m_write) return m_master ? WD_CHANNEL : WOD_CHANNEL;
   else return m_master ? WOD_CHANNEL : WD_CHANNEL;
 }

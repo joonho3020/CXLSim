@@ -1,5 +1,5 @@
 /*
-Copyright (c) <2012>, <Georgia Institute of Technology> All rights reserved.
+Copyright (c) <2012>, <Seoul National University> All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted
 provided that the following conditions are met:
@@ -27,53 +27,38 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /**********************************************************************************************
- * File         : global_types.h
- * Author       : HPArch
- * Date         : 12/16/2007
- * CVS          : $Id: global_types.h,v 1.1 2008-02-22 22:51:06 hyesoon Exp $:
- * Description  : Global type declarations intended to be included in every source file.
+ * File         : uop.cc
+ * Author       : Joonho
+ * Date         : 02/5/2022
+ * SVN          : $Id: uop.cc,v 1.5 2021-10-08 21:01:41 kacear Exp $:
+ * Description  : NDP uop
  *********************************************************************************************/
 
-#ifndef GLOBALS_H_INCLUDED
-#define GLOBALS_H_INCLUDED
+#include <iostream>
 
-#include <cstdint>
+#include "uop.h"
+#include "cxlsim.h"
+#include "global_types.h"
 
 namespace cxlsim {
-#define MAX_UOP_SRC_DEPS 10
 
-// Renames
-// Try to use these rather than built-in C types in order to preserve portability
-typedef unsigned uns;
-typedef unsigned char uns8;
-typedef unsigned short uns16;
-typedef unsigned uns32;
-typedef unsigned long long uns64;
-typedef char int8;
-typedef short int16;
-typedef int int32;
-typedef int long long int64;
-typedef int Generic_Enum;
-typedef uns64 Counter;
-typedef int64 Quad;
-typedef uns64 UQuad;
-
-/* power & hotleakage  */ /* please CHECKME Hyesoon 6-15-2009 */
-typedef uns64 tick_t;
-typedef uns64 counter_t;
-
-/* Conventions */
-typedef uns64 Addr;
-typedef uns32 Binary;
-
-typedef enum uop_latency_map {  // enum for x86 latency maps - Michael
-  LATENCY_DEFAULT = 0,
-  LATENCY_SKYLAKE,
-  LATENCY_SKYLAKE_X,
-  LATENCY_COFFEE_LAKE,
-  NUM_LATENCY_MAPS
-} latency_map;
-
+uop_s::uop_s(cxlsim_c* simBase) {
+  init();
+  m_simBase = simBase;
 }
 
-#endif // GLOBALS_H_INCLUDED
+void uop_s::init(void) {
+  m_uop_type = UOP_NOP;
+  m_mem_type = NOT_MEM;
+  m_addr = 0;
+  m_src_rdy = false;
+
+  for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
+    m_map_src_info[ii].m_uop = NULL;
+  }
+}
+
+void uop_s::print(void) {
+}
+
+} // namespace cxlsim

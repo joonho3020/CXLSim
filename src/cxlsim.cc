@@ -39,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxlsim.h"
 #include "pcie_rc.h"
 #include "cxl_t3.h"
+#include "uop.h"
 #include "packet_info.h"
 #include "utils.h"
 #include "statistics.h"
@@ -73,6 +74,7 @@ cxlsim_c::cxlsim_c() {
   m_cycle = 0;
 
   // memory pool for packets
+  m_uop_pool = new pool_c<uop_s>;
   m_req_pool = new pool_c<cxl_req_s>;
   m_msg_pool = new pool_c<message_s>;
   m_flit_pool = new pool_c<flit_s>;
@@ -114,7 +116,7 @@ void cxlsim_c::register_uopreq_callback(callback_t* fn) {
 }
 
 // accept request from the outside simulator
-bool cxlsim_c::insert_request(Addr addr, bool write, bool uop, void* req) {
+bool cxlsim_c::insert_mem_request(Addr addr, bool write, void* req) {
   if (m_rc->rootcomplex_full()) {
     return false;
   } else {
@@ -124,11 +126,51 @@ bool cxlsim_c::insert_request(Addr addr, bool write, bool uop, void* req) {
         << std::dec << " write: " << write << std::endl;
     }
 
+    // assign a new request
     cxl_req_s* new_req = m_req_pool->acquire_entry(this);
-    new_req->m_addr = addr;
-    new_req->m_write = write;
-    new_req->m_uop = uop;
-    new_req->m_req = req;
+    new_req->init(addr, write, false, NULL, req);
+
+    m_rc->insert_request(new_req);
+    return true;
+  }
+}
+
+bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
+                          Addr addr, Counter unique_id, 
+                          std::vector<std::pair<Counter, int>> src_uop_list) {
+  if (m_rc->rootcomplex_full()) {
+    return false;
+  } else {
+    if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
+      std::cout << "==== Insert req to MXP"
+        << std::hex << " uop_type: " << uop_type
+        << std::dec << " mem_type: " << mem_type << std::endl;
+    }
+
+    // assign a new uop
+    uop_s* new_uop = m_uop_pool->acquire_entry(this);
+    new_uop->m_unique_num = unique_id;
+    new_uop->m_uop_type = (Uop_Type)(uop_type);
+    new_uop->m_mem_type = (Mem_Type)(mem_type);
+    new_uop->m_addr = addr;
+    new_uop->m_src_rdy = false;
+    for (int ii = 0, src_cnt = 0; ii < (int)src_uop_list.size(); ii++) {
+      Counter src_unique_id = src_uop_list[ii].first;
+      Dep_Type dep_type = (Dep_Type)(src_uop_list[ii].second);
+
+      if (m_uop_map.find(src_unique_id) == m_uop_map.end()) {
+        continue;
+      }
+      new_uop->m_map_src_info[src_cnt] = {dep_type, m_uop_map[src_unique_id]};
+      src_cnt++;
+    }
+
+    // update uop map table
+    m_uop_map[unique_id] = new_uop;
+
+    // assign a new request
+    cxl_req_s* new_req = m_req_pool->acquire_entry(this);
+    new_req->init(addr, false, true, new_uop, req);
 
     m_rc->insert_request(new_req);
     return true;
@@ -271,14 +313,14 @@ void cxlsim_c::init_clock_domain() {
 
 void cxlsim_c::request_done(cxl_req_s* req) {
   // call registered callback function if it has one
-  if (m_uop_trans_done_cb && req->m_uop) {
+  if (m_uop_trans_done_cb && req->m_isuop) {
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "CXL UOP Req Done: " << std::endl;
     }
     (*m_uop_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
   else if (m_mem_trans_done_cb) {
-    assert(!req->m_uop);
+    assert(!req->m_isuop);
 
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "CXL Req Done: "
@@ -286,6 +328,20 @@ void cxlsim_c::request_done(cxl_req_s* req) {
                 << std::dec << "Write: " << req->m_write << " " << std::endl;
     }
     (*m_mem_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
+  }
+
+  // release uop entry
+  if (req->m_isuop) {
+    uop_s* cur_uop = req->m_uop;
+    Counter unique_num = cur_uop->m_unique_num;
+    assert(m_uop_map.find(unique_num) != m_uop_map.end());
+
+    // update uop table
+    m_uop_map.erase(unique_num);
+
+    // release entry
+    req->m_uop->init();
+    m_uop_pool->release_entry(cur_uop);
   }
 
   // release cxl request entry
