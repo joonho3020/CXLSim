@@ -92,6 +92,7 @@ cxlsim_c::cxlsim_c() {
 cxlsim_c::~cxlsim_c() {
   delete m_rc;
   delete m_mxp;
+  delete m_uop_pool;
   delete m_req_pool;
   delete m_msg_pool;
   delete m_flit_pool;
@@ -340,7 +341,7 @@ void cxlsim_c::request_done(cxl_req_s* req) {
     m_uop_map.erase(unique_num);
 
     // release entry
-    req->m_uop->init();
+    cur_uop->init();
     m_uop_pool->release_entry(cur_uop);
   }
 
