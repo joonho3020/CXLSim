@@ -45,7 +45,8 @@ pcie_max_flit_wait_cycle 2
 
 # DEBUG
 debug_io_sys 0
-debug_callback 1
+debug_callback 0
+debug_uop 1
 
 
 # OUTPUT Redirect

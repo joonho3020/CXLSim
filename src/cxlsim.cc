@@ -174,6 +174,12 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
     new_req->init(addr, false, true, new_uop, req);
 
     m_rc->insert_request(new_req);
+
+    // debug messages
+    if (m_knobs->KNOB_DEBUG_UOP->getValue()) {
+      new_uop->print();
+    }
+
     return true;
   }
 }

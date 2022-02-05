@@ -59,6 +59,16 @@ void uop_s::init(void) {
 }
 
 void uop_s::print(void) {
+  std::cout << "unique id: " << m_unique_num;
+  std::cout << " src id: ";
+  for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
+    if (m_map_src_info[ii].m_uop == NULL) {
+      continue;
+    }
+
+    std::cout << " " << m_map_src_info[ii].m_uop->m_unique_num;
+  }
+  std::cout << std::endl;
 }
 
 } // namespace cxlsim
