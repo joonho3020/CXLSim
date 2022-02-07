@@ -99,7 +99,7 @@ public:
    * insert a uop request to the CXL mem 
    */
   bool insert_uop_request(void* req, int uop_type, int mem_type,
-      Addr addr, Counter unique_id, 
+      Addr addr, Counter unique_id, int latency,
       std::vector<std::pair<Counter, int>> src_uop_list);
 
   /**
@@ -142,13 +142,14 @@ public:
   CoreStatistics* m_coreStatsTemplate;
   std::map<std::string, std::ofstream *> m_AllStatsOutputStreams;
 
-private:
-  std::map<Counter, uop_s*> m_uop_map; /**< maps unique ids to uops */
-
+public:
   pool_c<uop_s>* m_uop_pool; /** uop pool for requests */
   pool_c<cxl_req_s>* m_req_pool; /**< memory pool for requests */
   pool_c<message_s>* m_msg_pool; /**< memory pool for messages */
   pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
+
+private:
+  std::map<Counter, uop_s*> m_uop_map; /**< maps unique ids to uops */
 
   callback_t* m_mem_trans_done_cb; /* memory callback fn for the outer simultor */
   callback_t* m_uop_trans_done_cb; /* uop callback fn for the outer simulator */

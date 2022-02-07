@@ -129,15 +129,6 @@ typedef enum Mem_Type_enum {
   MEM_SWPREF_T0,
   MEM_SWPREF_T1,
   MEM_SWPREF_T2,
-  MEM_LD_LM,  //!< local memory access in PTX
-  MEM_LD_SM,  //!< shared memory access in PTX
-  MEM_LD_GM,  //!< global memory access in PTX
-  MEM_ST_LM,  //!< local memory access in PTX
-  MEM_ST_SM,  //!< shared memory access in PTX
-  MEM_ST_GM,  //!< global memory access in PTX
-  MEM_LD_CM,  //!< load from constant memory in PTX
-  MEM_LD_TM,  //!< load from texture memory in PTX
-  MEM_LD_PM,  //!< load from parameter memory in PTX
   NUM_MEM_TYPES,
 } Mem_Type;
 
@@ -166,13 +157,24 @@ typedef struct uop_s {
    */
   uop_s(cxlsim_c* simBase);
   void init(void);
+  bool is_write(void);
   void print(void);
 
   Counter m_unique_num; /**< unique uop number */
   Uop_Type m_uop_type; /**< uop type */
   Mem_Type m_mem_type; /**< memory access type */
+
+  bool m_valid; /**< source uop is valid */
+
   Addr m_addr; /**< memory access address */
+  int m_latency; /**< latency of uop */
+
+  Counter m_last_dep_exec; /**< cycle when last dep uop is done */
+  Counter m_exec_cycle; /**< cycle when the uop was executed */
+  Counter m_done_cycle; /**< cycle when uop execution is finished */
+
   bool m_src_rdy; /**< src uops ready */
+  int m_src_cnt; /**< src uop count */
   src_info_s m_map_src_info[MAX_UOP_SRC_DEPS]; /** src uop info */
   cxlsim_c* m_simBase;
 } uop_s;

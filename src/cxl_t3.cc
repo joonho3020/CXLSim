@@ -43,6 +43,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "all_knobs.h"
 #include "statistics.h"
+#include "utils.h"
 
 #include "ramulator/src/Request.h"
 
@@ -85,7 +86,9 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   process_txtrans();
   start_transaction();
 
-  // process pending uops
+  // process ndp uops
+  process_exec_queue();
+  process_issue_queue();
   process_pending_uops();
 
   // process memory requests
@@ -111,6 +114,11 @@ void cxlt3_c::start_transaction() {
   vector<cxl_req_s*> tmp_list;
 
   for (auto req : m_mxp_resp_queue) {
+    if (req->m_isuop) {
+      req->m_uop->init();
+      m_simBase->m_uop_pool->release_entry(req->m_uop);
+    }
+
     if (push_txvc(req)) {
       tmp_list.push_back(req);
     } else {
@@ -143,7 +151,7 @@ void cxlt3_c::process_pending_req() {
     cxl_req_s* req = *I;
 
     if (req->m_isuop) {
-      m_uop_queue.push_back(req);
+      m_pend_uop_queue.push_back(req);
       tmp_list.push_back(req);
     } else if (push_ramu_req(req)) {
       tmp_list.push_back(req);
@@ -155,39 +163,139 @@ void cxlt3_c::process_pending_req() {
   }
 }
 
-// TODO : use uops from m_uop_queue and process them
+bool cxlt3_c::check_ready(uop_s* cur_uop) {
+  bool ready = true;
+
+  // if the current uop is not dependent on anything or, all srcs ready
+  if (cur_uop->m_src_cnt == 0 || cur_uop->m_src_rdy) {
+    return true;
+  }
+
+  for (int ii = 0; ii < cur_uop->m_src_cnt; ii++) {
+    uop_s* src_uop = cur_uop->m_map_src_info[ii].m_uop;
+
+    // check if the src uop is valid
+    if ((src_uop == NULL) || (src_uop->m_valid == false)) {
+      continue;
+    }
+
+    // check if src uop is ready
+    if ((src_uop->m_done_cycle == 0) || (src_uop->m_done_cycle < m_cycle)) {
+      if ((cur_uop->m_last_dep_exec == 0) || 
+          (cur_uop->m_last_dep_exec < src_uop->m_done_cycle)) {
+        cur_uop->m_last_dep_exec = src_uop->m_done_cycle;
+      }
+      ready = false;
+      return false;
+    }
+  }
+
+  cur_uop->m_src_rdy = ready;
+  return ready;
+}
+
+// TODO : use uops from m_pend_uop_queue and process them
 void cxlt3_c::process_pending_uops() {
   std::vector<cxl_req_s*> tmp_list;
-  for (auto it = m_uop_queue.begin(); it != m_uop_queue.end(); it++) {
+  for (auto it = m_pend_uop_queue.begin(); it != m_pend_uop_queue.end(); it++) {
     cxl_req_s* req = *it;
 
-    m_mxp_resp_queue.push_back(req);
+    auto cur_uop = req->m_uop;
+    assert(cur_uop);
+
+    // TODO : add issue queue size & implement back-pressure
+    if (check_ready(cur_uop)) {
+      m_issue_queue.push_back(req);
+    }
+
     tmp_list.push_back(req);
   }
 
   for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
-    m_uop_queue.remove(*it);
+    m_pend_uop_queue.remove(*it);
+  }
+}
+
+// TODO : memory reqs that are prefetch requests?
+void cxlt3_c::process_issue_queue() {
+  std::vector<cxl_req_s*> tmp_list;
+  for (auto it = m_issue_queue.begin(); it != m_issue_queue.end(); it++) {
+    auto req = *it;
+    auto cur_uop = req->m_uop;
+    
+    if (cur_uop->m_mem_type == NOT_MEM) {
+      // TODO : implement ports to model execution unit BW
+      cur_uop->m_exec_cycle = m_cycle;
+      cur_uop->m_done_cycle = m_cycle + cur_uop->m_latency;
+
+      tmp_list.push_back(req);
+      m_exec_queue.push_back(req);
+    } else {
+      assert(req->m_addr == cur_uop->m_addr);
+
+      if (push_ramu_req(req)) {
+        cur_uop->m_exec_cycle = m_cycle;
+        tmp_list.push_back(req);
+      }
+    }
+  }
+
+  for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
+    m_issue_queue.remove(*it);
+  }
+}
+
+void cxlt3_c::process_exec_queue() {
+  std::vector<cxl_req_s*> tmp_list;
+  for (auto it = m_exec_queue.begin(); it != m_exec_queue.end(); it++) {
+    auto req = *it;
+    auto cur_uop = req->m_uop;
+
+    if (cur_uop->m_done_cycle <= m_cycle) {
+      m_mxp_resp_queue.push_back(req);
+      tmp_list.push_back(req);
+    }
+  }
+
+  for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
+    m_exec_queue.remove(*it);
   }
 }
 
 bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
-  bool is_write = req->m_write;
+  bool is_write;
+  long addr;
+
+  if (req->m_isuop) {
+    auto cur_uop = req->m_uop;
+    is_write = cur_uop->is_write();
+    addr = static_cast<long>(cur_uop->m_addr);
+  } else {
+    is_write = req->m_write;
+    addr = static_cast<long>(req->m_addr);
+  }
   auto req_type = (is_write) ? ramulator::Request::Type::WRITE
                              : ramulator::Request::Type::READ;
   auto cb_func = (is_write) ? m_write_cb_func : m_read_cb_func;
-  long addr = static_cast<long>(req->m_addr);
 
-  ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id);
+  ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id, req->m_isuop);
+/* ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id); */
   bool accepted = m_ramu_wrapper->send(ramu_req);
 
   if (accepted) {
-    if (is_write) {
-      m_mxp_writes[ramu_req.addr].push_back(req);
+    if (req->m_isuop) {
+      if (is_write) m_uop_writes[ramu_req.addr].push_back(req);
+      else m_uop_reads[ramu_req.addr].push_back(req);
     } else {
-      m_mxp_reads[ramu_req.addr].push_back(req);
-    }
+      if (is_write) m_mxp_writes[ramu_req.addr].push_back(req);
+      else m_mxp_reads[ramu_req.addr].push_back(req);
 
-    ++m_mxp_requestsInFlight;
+      ++m_mxp_requestsInFlight;
+    }
+/* if (is_write) m_mxp_writes[ramu_req.addr].push_back(req); */
+/* else m_mxp_reads[ramu_req.addr].push_back(req); */
+/* ++m_mxp_requestsInFlight; */
+
     return true;
   } else {
     return false;
@@ -196,32 +304,82 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 
 // ramulator read callback
 void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
-  if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-    printf("CXL RAM read callback done: 0x%lx\n", ramu_req.addr);
+  cxl_req_s* req;
+  if (ramu_req.is_pim) { // pim req returned
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      printf("CXL RAM UOP_READ done: 0x%lx %d\n", ramu_req.addr);
+    }
+
+    auto &req_q = m_uop_reads.find(ramu_req.addr)->second;
+    req = req_q.front();
+    req_q.pop_front();
+    if (!req_q.size()) m_uop_reads.erase(ramu_req.addr);
+
+    auto cur_uop = req->m_uop;
+    assert(cur_uop);
+
+    cur_uop->m_done_cycle = m_cycle;
+    m_exec_queue.push_back(req);
+  } else { // normal req returned
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      printf("CXL RAM read done: 0x%lx %d\n", ramu_req.addr);
+    }
+
+    auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
+    req = req_q.front();
+    req_q.pop_front();
+    if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr);
+
+    --m_mxp_requestsInFlight;
+    m_mxp_resp_queue.push_back(req);
   }
+/* auto &req_q = m_mxp_reads.find(ramu_req.addr)->second; */
+/* req = req_q.front(); */
+/* req_q.pop_front(); */
+/* if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr); */
 
-  auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
-  cxl_req_s *req = req_q.front();
-  req_q.pop_front();
-  if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr);
-
-  --m_mxp_requestsInFlight;
-  m_mxp_resp_queue.push_back(req);
+/* --m_mxp_requestsInFlight; */
+/* m_mxp_resp_queue.push_back(req); */
 }
 
 // ramulator write callback
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
-  if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-    printf("CXL RAM write callback done: 0x%lx\n", ramu_req.addr);
+  cxl_req_s* req;
+  if (ramu_req.is_pim) { // pim req returned
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      printf("CXL RAM UOP_WRITE callback done: 0x%lx\n", ramu_req.addr);
+    }
+
+    auto &req_q = m_uop_writes.find(ramu_req.addr)->second;
+    req = req_q.front();
+    req_q.pop_front();
+    if (!req_q.size()) m_uop_writes.erase(ramu_req.addr);
+
+    auto cur_uop = req->m_uop;
+    assert(cur_uop);
+
+    cur_uop->m_done_cycle = m_cycle;
+    m_exec_queue.push_back(req);
+  } else { // normal req returned
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      printf("CXL RAM write callback done: 0x%lx\n", ramu_req.addr);
+    }
+
+    auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;
+    req = req_q.front();
+    req_q.pop_front();
+    if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr);
+
+    --m_mxp_requestsInFlight;
+    m_mxp_resp_queue.push_back(req);
   }
+/* auto &req_q = m_mxp_writes.find(ramu_req.addr)->second; */
+/* req = req_q.front(); */
+/* req_q.pop_front(); */
+/* if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr); */
 
-  auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;
-  cxl_req_s *req = req_q.front();
-  req_q.pop_front();
-  if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr);
-
-  --m_mxp_requestsInFlight;
-  m_mxp_resp_queue.push_back(req);
+/* --m_mxp_requestsInFlight; */
+/* m_mxp_resp_queue.push_back(req); */
 }
 
 // print for debugging

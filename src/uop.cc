@@ -50,12 +50,21 @@ uop_s::uop_s(cxlsim_c* simBase) {
 void uop_s::init(void) {
   m_uop_type = UOP_NOP;
   m_mem_type = NOT_MEM;
+  m_valid = false;
   m_addr = 0;
+  m_latency = 0;
+  m_last_dep_exec = 0;
+  m_exec_cycle = 0;
+  m_done_cycle = 0;
   m_src_rdy = false;
-
+  m_src_cnt = 0;
   for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
     m_map_src_info[ii].m_uop = NULL;
   }
+}
+
+bool uop_s::is_write(void) {
+  return m_mem_type == MEM_ST;
 }
 
 void uop_s::print(void) {

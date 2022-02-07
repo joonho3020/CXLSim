@@ -137,7 +137,7 @@ bool cxlsim_c::insert_mem_request(Addr addr, bool write, void* req) {
 }
 
 bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
-                          Addr addr, Counter unique_id, 
+                          Addr addr, Counter unique_id, int latency,
                           std::vector<std::pair<Counter, int>> src_uop_list) {
   if (m_rc->rootcomplex_full()) {
     return false;
@@ -149,13 +149,16 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
     }
 
     // assign a new uop
+    // - TODO : code cleanup
     uop_s* new_uop = m_uop_pool->acquire_entry(this);
     new_uop->m_unique_num = unique_id;
     new_uop->m_uop_type = (Uop_Type)(uop_type);
     new_uop->m_mem_type = (Mem_Type)(mem_type);
     new_uop->m_addr = addr;
+    new_uop->m_latency = latency;
     new_uop->m_src_rdy = false;
-    for (int ii = 0, src_cnt = 0; ii < (int)src_uop_list.size(); ii++) {
+    int src_cnt = 0;
+    for (int ii = 0; ii < (int)src_uop_list.size(); ii++) {
       Counter src_unique_id = src_uop_list[ii].first;
       Dep_Type dep_type = (Dep_Type)(src_uop_list[ii].second);
 
@@ -165,6 +168,7 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
       new_uop->m_map_src_info[src_cnt] = {dep_type, m_uop_map[src_unique_id]};
       src_cnt++;
     }
+    new_uop->m_src_cnt = src_cnt;
 
     // update uop map table
     m_uop_map[unique_id] = new_uop;

@@ -470,6 +470,8 @@ void pcie_ep_c::process_txtrans() {
 // - Currently, only one message can fit into a flit slot.
 // - However, for response messages, multiple messages can fit into a slot.
 // - Need to impelement this part to save BW.
+// FIXME 3
+// - More cleaner, general implementation???
 void pcie_ep_c::process_txdll() {
   message_s* msg;
   flit_s* new_flit = NULL;
