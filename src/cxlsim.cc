@@ -345,7 +345,7 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   if (req->m_isuop) {
     uop_s* cur_uop = req->m_uop;
     Counter unique_num = cur_uop->m_unique_num;
-    assert(m_uop_map.find(unique_num) != m_uop_map.end());
+/* assert(m_uop_map.find(unique_num) != m_uop_map.end()); */
 
     // update uop table
     m_uop_map.erase(unique_num);

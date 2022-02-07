@@ -114,10 +114,10 @@ void cxlt3_c::start_transaction() {
   vector<cxl_req_s*> tmp_list;
 
   for (auto req : m_mxp_resp_queue) {
-    if (req->m_isuop) {
-      req->m_uop->init();
-      m_simBase->m_uop_pool->release_entry(req->m_uop);
-    }
+/* if (req->m_isuop) { */
+/* req->m_uop->init(); */
+/* m_simBase->m_uop_pool->release_entry(req->m_uop); */
+/* } */
 
     if (push_txvc(req)) {
       tmp_list.push_back(req);
@@ -231,7 +231,7 @@ void cxlt3_c::process_issue_queue() {
       tmp_list.push_back(req);
       m_exec_queue.push_back(req);
     } else {
-      assert(req->m_addr == cur_uop->m_addr);
+/* assert(req->m_addr == cur_uop->m_addr); */
 
       if (push_ramu_req(req)) {
         cur_uop->m_exec_cycle = m_cycle;
