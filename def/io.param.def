@@ -79,7 +79,3 @@ param<RAMULATOR_CACHELINE_SIZE, ramulator_cacheline_size, int, 64>
 /* Simulation configs */
 param<NUM_SIM_CORES, num_sim_cores, int, 1>
 param<PCIE_INSERTQ_SIZE, pcie_insertq_size, int, 32>
-
-/* NDP Calculation related */
-param<UOP_LATENCY_MAP, uop_latency_map, std::string, x86>
-param<CAL_NUM, cal_num, int, 3>

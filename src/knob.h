@@ -452,11 +452,6 @@ public:
     return os;
   }
 
-  /**
-   * Return the value of the decoded UOP latency knob
-   */
-  latency_map getDecodedUOPLatencyKnob();
-
 private:
   /**
    * Create knob-value pair from the string.
@@ -478,7 +473,6 @@ private:
   std::map<std::string, std::string, ltstr_s>
     m_valuesFromCommandLineSwitches; /**< values from command */
   KnobEntryTokenizer m_theTokenizer; /**< tokenizer */
-  latency_map uop_latency_knob;
 };
 
 } // namespace CXL

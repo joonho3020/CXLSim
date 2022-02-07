@@ -43,52 +43,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "all_knobs.h"
 #include "statistics.h"
-#include "../../uop.h"
 
 #include "ramulator/src/Request.h"
 
 namespace cxlsim {
-
-
-  //latency binding
-struct Uop_LatencyBinding_Init {
-  Uop_Type uop_type_s; /**< uop type */
-  std::string m_name; /**< uop type name */
-  int m_latency; /**< latency */
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_x86[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_x86.def"
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_x86_skylake[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_x86_skylake.def"
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_x86_skylake_x[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_x86_skylake_x.def"
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_x86_coffee_lake[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_x86_coffee_lake.def"
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_ptx[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_ptx580.def"
-};
-
-static Uop_LatencyBinding_Init uop_latencybinding_init_igpu[] = {
-#define DEFUOP(A, B) {A, #A, B},
-#include "../../../def/uoplatency_igpu.def"
-};
-
-
-
 
 cxlt3_c::cxlt3_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase),
@@ -112,49 +70,6 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
 
   // init others
   m_cycle_internal = 0;
-
-  //latency binding
-  latency_map lat_map = simBase->m_knobsContainer->getDecodedUOPLatencyKnob();
-  int latency_array_size = 0;
-
-  switch (lat_map) {
-    case LATENCY_SKYLAKE:
-      latency_array_size = (sizeof uop_latencybinding_init_x86_skylake /
-                            sizeof(uop_latencybinding_init_x86_skylake[0]));
-
-      for (int ii = 0; ii < latency_array_size; ++ii) {
-        m_latency[uop_latencybinding_init_x86_skylake[ii].uop_type_s] =
-          uop_latencybinding_init_x86_skylake[ii].m_latency;
-      }
-      break;
-    case LATENCY_SKYLAKE_X:
-      latency_array_size = (sizeof uop_latencybinding_init_x86_skylake_x /
-                            sizeof(uop_latencybinding_init_x86_skylake_x[0]));
-
-      for (int ii = 0; ii < latency_array_size; ++ii) {
-        m_latency[uop_latencybinding_init_x86_skylake_x[ii].uop_type_s] =
-          uop_latencybinding_init_x86_skylake_x[ii].m_latency;
-      }
-      break;
-    case LATENCY_COFFEE_LAKE:
-      latency_array_size =
-        (sizeof uop_latencybinding_init_x86_coffee_lake /
-         sizeof(uop_latencybinding_init_x86_coffee_lake[0]));
-
-      for (int ii = 0; ii < latency_array_size; ++ii) {
-        m_latency[uop_latencybinding_init_x86_coffee_lake[ii].uop_type_s] =
-          uop_latencybinding_init_x86_coffee_lake[ii].m_latency;
-      }
-      break;
-    default:
-      latency_array_size = (sizeof uop_latencybinding_init_x86 /
-                            sizeof(uop_latencybinding_init_x86[0]));
-
-      for (int ii = 0; ii < latency_array_size; ++ii) {
-        m_latency[uop_latencybinding_init_x86[ii].uop_type_s] =
-          uop_latencybinding_init_x86[ii].m_latency;
-      }
-  } 
 }
 
 cxlt3_c::~cxlt3_c() {
@@ -243,40 +158,11 @@ void cxlt3_c::process_pending_req() {
 // TODO : use uops from m_uop_queue and process them
 void cxlt3_c::process_pending_uops() {
   std::vector<cxl_req_s*> tmp_list;
-  int cal_num = 0;
-
   for (auto it = m_uop_queue.begin(); it != m_uop_queue.end(); it++) {
-    cal_num++;
     cxl_req_s* req = *it;
-    uop_c* cur_uop = static_cast<uop_c*> (req->m_req);
 
-    bool dependency_stall = false;
-    int cii = 0; 
-    for(cii = 0; cii < MAX_UOP_SRC_DEPS; cii++){
-      if(cur_uop->m_map_src_info[cii] != NULL){
-        if(cur_uop->m_map_src_info[cii].m_uop != NULL){
-          //check src info done
-          if(cur_uop->m_map_src_info[cii].m_done_cycle >= m_cycle
-              || cur_uop->m_map_src_info[cii].m_done_cycle == 0){
-            dependency_stall = true;
-            break;
-          }
-        }
-      }
-    }
-    
-    //set done cycle
-    if(dependency_stall == false && cur_uop->m_done_cycle == 0){
-      cur_uop->m_done_cycle = m_cycle + m_latency[cur_uop->m_uop_type];
-    }
-    
-    //calculation done check
-    if(cur_uop->m_done_cycle <= m_cycle && cur_uop->m_done_cycle != 0){
-      m_mxp_resp_queue.push_back(req);
-      tmp_list.push_back(req);
-    }
-    //At most KNOB_CAL_NUM calculation at the same time
-    if(cal_num == *KNOB(KNOB_CAL_NUM)) break;
+    m_mxp_resp_queue.push_back(req);
+    tmp_list.push_back(req);
   }
 
   for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
