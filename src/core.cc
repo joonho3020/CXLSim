@@ -50,15 +50,18 @@ core_req_s::core_req_s() {
   init();
 }
 
-core_req_s::core_req_s(Addr addr, bool write, bool uop) {
+core_req_s::core_req_s(Addr addr, bool write, bool uop, int type) {
   m_addr = addr;
   m_write = write;
-  m_uop = uop;
+  m_isuop = uop;
+  m_type = -1;
 }
 
 void core_req_s::init() {
   m_addr = 0;
   m_write = false;
+  m_isuop = false;
+  m_type = -1;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -69,6 +72,8 @@ core_c::core_c(cxlsim_c* simBase) {
   m_mem_return_reqs = 0;
   m_uop_insert_reqs = 0;
   m_uop_return_reqs = 0;
+  m_cycle = 0;
+  m_unique_num = 0;
 
   callback_t *mem_callback = 
     new Callback<core_c, void, Addr, bool, void*> (&(*this),  &core_c::core_mem_callback);
@@ -87,12 +92,54 @@ void core_c::set_tracefile(std::string filename) {
   m_tracefilename = filename;
 }
 
-void core_c::insert_request(Addr addr, bool write, bool uop) {
-  core_req_s* new_req = new core_req_s(addr, write, uop);
+std::pair<int, int> core_c::set_uop_type(int type) {
+  assert(type >= 2);
 
-  if (m_simBase->insert_request(addr, write, uop, (void*)new_req)) {
-    // do nothing
+  int uop_type; 
+  int mem_type;
+  switch (type) {
+    case (2): // IADD
+      uop_type = 7;
+      mem_type = 0;
+      break;
+    case(3): //IMEM_LD
+      uop_type = 6;
+      mem_type = 1;
+      break;
+    case(4): //IMEM_ST
+      uop_type = 6;
+      mem_type = 2;
+      break;
+    default:
+      assert(0);
+  }
+
+  return {uop_type, mem_type};
+}
+
+void core_c::insert_request(Addr addr, int type) {
+  bool uop = (type >= 2);
+  bool write = (type == 1);
+
+  core_req_s* new_req = new core_req_s(addr, write, uop, type);
+
+  bool success = false;
+  if (!uop) {
+    success = m_simBase->insert_mem_request(addr, write, (void*)new_req);
   } else {
+    // as an example, insert a uop request that is dependent on the
+    // previous uop
+    std::vector<std::pair<Counter, int>> src_uop_list;
+    src_uop_list.push_back({m_unique_num, 1});
+
+    int latency = 3; // just an example
+    auto uop_info = set_uop_type(type);
+    success = m_simBase->insert_uop_request((void*)new_req, uop_info.first, 
+                                            uop_info.second, addr, 
+                                            ++m_unique_num, latency, src_uop_list);
+  }
+
+  if (!success) {
     m_pending_q.push_back(new_req);
   }
 
@@ -110,13 +157,31 @@ void core_c::run_a_cycle(bool pll_locked) {
   // if the pending_q is not empty insert one req into cxl every cycle
   if (!m_pending_q.empty()) {
     core_req_s* req = m_pending_q.front();
-    if(m_simBase->insert_request(req->m_addr, req->m_write, 
-                                 req->m_uop, (void*)req)) {
+    bool success = false;
+    if (req->m_isuop) {
+      // as an example, insert a uop request that is dependent on the
+      // previous uop
+      std::vector<std::pair<Counter, int>> src_uop_list;
+      src_uop_list.push_back({m_unique_num, 1});
+
+      int latency = 3; // just an example
+      auto uop_info = set_uop_type(req->m_type);
+      success = m_simBase->insert_uop_request((void*)req, 
+                                        uop_info.first, uop_info.second, 
+                                        req->m_addr, ++m_unique_num, 
+                                        latency, src_uop_list);
+    } else {
+      success = m_simBase->insert_mem_request(req->m_addr, req->m_write, 
+                                              (void*)req);
+    }
+
+    if (success) {
       m_pending_q.pop_front();
     }
   }
 
   m_simBase->run_a_cycle(pll_locked);
+  m_cycle++;
 }
 
 void core_c::run_sim() {
@@ -129,14 +194,9 @@ void core_c::run_sim() {
       while (std::getline(file, line)) {
         Addr addr;
         int type;
-        bool write;
-        bool uop;
-
         std::sscanf(line.c_str(), "%llx %d", &addr, &type);
-        write = (type == 1);
-        uop = (type == 2);
-       
-        insert_request(addr, write, uop);
+
+        insert_request(addr, type);
         tot_reqs++;
       }
     file.close();
@@ -175,7 +235,7 @@ void core_c::core_uop_callback(Addr addr, bool write, void *req) {
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
   assert(addr == cur_req->m_addr);
-  assert(write == cur_req->m_write);
+/* assert(write == cur_req->m_write); */
 
   m_uop_return_reqs++;
   delete cur_req;

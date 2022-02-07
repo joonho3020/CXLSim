@@ -102,6 +102,12 @@ private:
    * Process pending uops
    */
   void process_pending_uops();
+
+  void process_issue_queue();
+  void process_exec_queue();
+  bool check_ready(uop_s* cur_uop);
+
+
   /**
    * Push request to ramulator
    */
@@ -122,6 +128,9 @@ private:
   unsigned int m_mxp_requestsInFlight;
   std::map<long, std::list<cxl_req_s*>> m_mxp_reads; /**< rd reqs waiting for ramu callback */
   std::map<long, std::list<cxl_req_s*>> m_mxp_writes; /**< wr reqs waiting for ramu callback */
+
+  std::map<long, std::list<cxl_req_s*>> m_uop_reads; /**< rd reqs waiting for ramu callback */
+  std::map<long, std::list<cxl_req_s*>> m_uop_writes; /**< wr reqs waiting for ramu callback */
   std::list<cxl_req_s*> m_mxp_resp_queue; /**< resp returned from ramu */
 
   // members for ramulator
@@ -131,7 +140,11 @@ private:
   std::function<void(ramulator::Request &)> m_write_cb_func; /**< ramulator write callback */
 
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
-  std::list<cxl_req_s*> m_uop_queue; /**< uops to be processed */
+
+  // NDP related
+  std::list<cxl_req_s*> m_pend_uop_queue; /**< uops to be processed */
+  std::list<cxl_req_s*> m_issue_queue; /**< uops issued */
+  std::list<cxl_req_s*> m_exec_queue; /**< uops executed */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
 };

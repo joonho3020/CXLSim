@@ -43,9 +43,13 @@ pcie_uop_msg_bits 64
 # Flit wait cycles
 pcie_max_flit_wait_cycle 2
 
+# ramulator
+ramulator_config_file DDR3-config.cfg
+
 # DEBUG
 debug_io_sys 0
 debug_callback 1
+debug_uop 1
 
 
 # OUTPUT Redirect

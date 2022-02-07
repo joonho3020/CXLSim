@@ -39,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include "Callback.h"
 #include "global_defs.h"
@@ -88,11 +89,18 @@ public:
   void register_uopreq_callback(callback_t* fn);
 
   /**
-   * insert a request to the CXL mem 
+   * insert a memory request to the CXL mem 
    * - it can take a arbitrary pointer type of the outer simulator (void* req)
    *   and return it by the registered callback function
    */
-  bool insert_request(Addr addr, bool write, bool uop, void* req);
+  bool insert_mem_request(Addr addr, bool write, void* req);
+
+  /**
+   * insert a uop request to the CXL mem 
+   */
+  bool insert_uop_request(void* req, int uop_type, int mem_type,
+      Addr addr, Counter unique_id, int latency,
+      std::vector<std::pair<Counter, int>> src_uop_list);
 
   /**
    * Tick a cycle
@@ -134,10 +142,14 @@ public:
   CoreStatistics* m_coreStatsTemplate;
   std::map<std::string, std::ofstream *> m_AllStatsOutputStreams;
 
-private:
+public:
+  pool_c<uop_s>* m_uop_pool; /** uop pool for requests */
   pool_c<cxl_req_s>* m_req_pool; /**< memory pool for requests */
   pool_c<message_s>* m_msg_pool; /**< memory pool for messages */
   pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
+
+private:
+  std::map<Counter, uop_s*> m_uop_map; /**< maps unique ids to uops */
 
   callback_t* m_mem_trans_done_cb; /* memory callback fn for the outer simultor */
   callback_t* m_uop_trans_done_cb; /* uop callback fn for the outer simulator */

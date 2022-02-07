@@ -40,6 +40,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 
 namespace cxlsim {
+#define MAX_UOP_SRC_DEPS 10
 
 // Renames
 // Try to use these rather than built-in C types in order to preserve portability

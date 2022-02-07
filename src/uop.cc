@@ -1,5 +1,5 @@
 /*
-Copyright (c) <2021>, <Seoul National University> All rights reserved.
+Copyright (c) <2012>, <Seoul National University> All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted
 provided that the following conditions are met:
@@ -27,76 +27,57 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /**********************************************************************************************
- * File         : core.h
+ * File         : uop.cc
  * Author       : Joonho
- * Date         : 12/3/2021
- * SVN          : $Id: core.cc 867 2021-12-03 02:28:12Z kacear $:
- * Description  : core for callback test
+ * Date         : 02/5/2022
+ * SVN          : $Id: uop.cc,v 1.5 2021-10-08 21:01:41 kacear Exp $:
+ * Description  : NDP uop
  *********************************************************************************************/
 
-#ifndef CORE_H
-#define CORE_H
+#include <iostream>
 
-#include <list>
-#include <string>
-#include <fstream>
-
+#include "uop.h"
+#include "cxlsim.h"
 #include "global_types.h"
-#include "global_defs.h"
 
 namespace cxlsim {
 
-/////////////////////////////////////////////////////////////////////////////
+uop_s::uop_s(cxlsim_c* simBase) {
+  init();
+  m_simBase = simBase;
+}
 
-// example message struct sent from core to cxl
-typedef struct core_req_s {
-  core_req_s();
-  core_req_s(Addr addr, bool write, bool uop, int type);
-  void init();
+void uop_s::init(void) {
+  m_uop_type = UOP_NOP;
+  m_mem_type = NOT_MEM;
+  m_valid = false;
+  m_addr = 0;
+  m_latency = 0;
+  m_last_dep_exec = 0;
+  m_exec_cycle = 0;
+  m_done_cycle = 0;
+  m_src_rdy = false;
+  m_src_cnt = 0;
+  for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
+    m_map_src_info[ii].m_uop = NULL;
+  }
+}
 
-  Addr m_addr;
-  bool m_write;
-  bool m_isuop;
-  int m_type;
-} core_req_s;
+bool uop_s::is_write(void) {
+  return m_mem_type == MEM_ST;
+}
 
-/////////////////////////////////////////////////////////////////////////////
+void uop_s::print(void) {
+  std::cout << "unique id: " << m_unique_num;
+  std::cout << " src id: ";
+  for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
+    if (m_map_src_info[ii].m_uop == NULL) {
+      continue;
+    }
 
-// simple core
-class core_c {
-public:
-  core_c(cxlsim_c* simBase);
-  ~core_c();
+    std::cout << " " << m_map_src_info[ii].m_uop->m_unique_num;
+  }
+  std::cout << std::endl;
+}
 
-  void set_tracefile(std::string filename);
-  void insert_request(Addr addr, int type);
-  void run_a_cycle(bool pll_locked);
-  void run_sim();
-
-private:
-  void core_mem_callback(Addr addr, bool write, void *req);
-  void core_uop_callback(Addr addr, bool write, void *req);
-
-  std::pair<int, int> set_uop_type(int type);
-
-public:
-  // for debugging
-  Counter m_mem_insert_reqs;
-  Counter m_mem_return_reqs;
-
-  Counter m_uop_insert_reqs;
-  Counter m_uop_return_reqs;
-
-  // simbase
-  Counter m_cycle;
-  cxlsim_c* m_simBase;
-
-private:
-  Counter m_unique_num;
-  std::string m_tracefilename;
-  std::list<core_req_s*> m_pending_q;
-};
-
-} //namespace CXL
-
-#endif //CORE_H
+} // namespace cxlsim

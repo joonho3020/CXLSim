@@ -43,6 +43,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <functional>
 
 #include "cxlsim.h"
+#include "uop.h"
 #include "global_defs.h"
 #include "global_types.h"
 
@@ -53,13 +54,15 @@ namespace cxlsim {
 typedef struct cxl_req_s {
   cxl_req_s(cxlsim_c* simBase);
   void init(void);
+  void init(Addr addr, bool write, bool isuop, uop_s* uop, void* req);
   void print(void);
 
-  Counter m_id;
-  Addr m_addr;
-  bool m_write;
-  bool m_uop;
-  void* m_req;
+  Counter m_id; /**< id of current request */
+  Addr m_addr; /**< if current req is memory request, target */
+  bool m_write; /**< if current req is memory request, is write? */
+  bool m_isuop; /**< indicates if the current request is a uop request */
+  uop_s* m_uop; /**< uop of the current request */
+  void* m_req; /**< pointer for saving external simulator requests */
   cxlsim_c* m_simBase;
 } cxl_req_s;
 

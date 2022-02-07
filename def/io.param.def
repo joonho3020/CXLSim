@@ -71,6 +71,7 @@ param<STATISTICS_OUT_DIRECTORY, out, std::string, .>
 /* Debug flags */
 param<DEBUG_IO_SYS, debug_io_sys, int, 0>
 param<DEBUG_CALLBACK, debug_callback, int, 0>
+param<DEBUG_UOP, debug_uop, int, 0>
 
 /* Ramulator configs */
 param<RAMULATOR_CONFIG_FILE, ramulator_config_file, std::string, DDR4-config.cfg>

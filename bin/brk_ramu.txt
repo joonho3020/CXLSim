@@ -1,0 +1,7 @@
+break CXLRamulatorWrapper::send(ramulator::Request)
+disable $bpnum
+break Memory<ramulator::DDR4, ramulator::Controller>::send(ramulator::Request)
+disable $bpnum
+break /home/ipa/joonho/Documents/bench/Simulators/macsim/src/CXLSim/src/ramulator/src/Memory.h:335
+disable $bpnum
+break Controller<ramulator::DDR4>::enqueue(ramulator::Request&)

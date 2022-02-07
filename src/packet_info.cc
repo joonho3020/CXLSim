@@ -54,8 +54,17 @@ void cxl_req_s::init(void) {
   m_id = 0;
   m_addr = 0;
   m_write = false;
-  m_uop = false;
+  m_isuop = false;
+  m_uop = NULL;
   m_req = NULL;
+}
+
+void cxl_req_s::init(Addr addr, bool write, bool isuop, uop_s* uop, void* req) {
+  m_addr = addr;
+  m_write = write;
+  m_isuop = isuop;
+  m_uop = uop;
+  m_req = req;
 }
 
 void cxl_req_s::print(void) {
