@@ -39,7 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /* PCIe overview
  * |-------------|                         |-------------|
- * |  vc1   vc2  |                         |             | 
+ * |  vc1   vc2  |                         |             |
  * | |msg| |msg| |                         |             |
  * | |msg| |msg| |                         |             |
  * | |msg| |msg| |                         |             |
@@ -59,7 +59,7 @@ POSSIBILITY OF SUCH DAMAGE.
  *        | TX phys     ---- flit --->   RX phys  | 
  *        |---------------------------------------|
  *        |---------------------------------------|
- * 
+ *
  *
  * Flit & slot & message
  * - A flit consists of 4 slots

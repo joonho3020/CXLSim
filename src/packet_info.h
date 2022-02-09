@@ -58,8 +58,11 @@ typedef struct cxl_req_s {
   void print(void);
 
   Counter m_id; /**< id of current request */
+  Counter m_dram_start; /**< cycle that this request started dram */
+
   Addr m_addr; /**< if current req is memory request, target */
   bool m_write; /**< if current req is memory request, is write? */
+
   bool m_isuop; /**< indicates if the current request is a uop request */
   uop_s* m_uop; /**< uop of the current request */
   void* m_req; /**< pointer for saving external simulator requests */

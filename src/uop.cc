@@ -63,19 +63,39 @@ void uop_s::init(void) {
   }
 }
 
+void uop_s::init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr,
+    int latency) {
+  m_unique_num = unique_id;
+  m_uop_type = (Uop_Type)(uop_type);
+  m_mem_type = (Mem_Type)(mem_type);
+  m_valid = true;
+  m_addr = addr;
+  m_latency = latency;
+  m_src_rdy = false;
+}
+
 bool uop_s::is_write(void) {
   return m_mem_type == MEM_ST;
 }
 
 void uop_s::print(void) {
-  std::cout << "unique id: " << m_unique_num;
-  std::cout << " src id: ";
+  std::cout << "UOP | id: " << m_unique_num
+            << " val: " << m_valid
+            << " srcrdy: " << m_src_rdy
+            << " exe: " << m_exec_cycle
+            << " done: " << m_done_cycle
+            << " lat: " << (m_done_cycle - m_exec_cycle);
+
   for (int ii = 0; ii < MAX_UOP_SRC_DEPS; ii++) {
-    if (m_map_src_info[ii].m_uop == NULL) {
+    auto src_uop = m_map_src_info[ii].m_uop;
+    if (src_uop == NULL) {
       continue;
     }
 
-    std::cout << " " << m_map_src_info[ii].m_uop->m_unique_num;
+    std::cout << " | id: " << src_uop->m_unique_num;
+/* << " val: " << src_uop->m_valid */
+/* << " exe: " << src_uop->m_exec_cycle */
+/* << " done: " << src_uop->m_done_cycle; */
   }
   std::cout << std::endl;
 }

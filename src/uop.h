@@ -157,6 +157,7 @@ typedef struct uop_s {
    */
   uop_s(cxlsim_c* simBase);
   void init(void);
+  void init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr, int latency);
   bool is_write(void);
   void print(void);
 

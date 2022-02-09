@@ -80,6 +80,10 @@ cxlt3_c::~cxlt3_c() {
 }
 
 void cxlt3_c::run_a_cycle(bool pll_locked) {
+  if (*KNOB(KNOB_DEBUG_UOP)) {
+    print_cxlt3_uops();
+  }
+
   // send response
   process_txphys();
   process_txdll();
@@ -108,17 +112,16 @@ void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
   m_cycle_internal++;
 }
 
+void cxlt3_c::push_uop_direct(cxl_req_s* req) {
+  m_pend_uop_queue.push_back(req);
+}
+
 // for requests finished from ramulator, send the response back to 
 // the root complex
 void cxlt3_c::start_transaction() {
   vector<cxl_req_s*> tmp_list;
 
   for (auto req : m_mxp_resp_queue) {
-/* if (req->m_isuop) { */
-/* req->m_uop->init(); */
-/* m_simBase->m_uop_pool->release_entry(req->m_uop); */
-/* } */
-
     if (push_txvc(req)) {
       tmp_list.push_back(req);
     } else {
@@ -166,16 +169,12 @@ void cxlt3_c::process_pending_req() {
 bool cxlt3_c::check_ready(uop_s* cur_uop) {
   bool ready = true;
 
-  // if the current uop is not dependent on anything or, all srcs ready
-  if (cur_uop->m_src_cnt == 0 || cur_uop->m_src_rdy) {
-    return true;
-  }
-
   for (int ii = 0; ii < cur_uop->m_src_cnt; ii++) {
     uop_s* src_uop = cur_uop->m_map_src_info[ii].m_uop;
 
     // check if the src uop is valid
-    if ((src_uop == NULL) || (src_uop->m_valid == false)) {
+    if ((src_uop == NULL) || (src_uop->m_valid == false) || 
+        (src_uop->m_unique_num > cur_uop->m_unique_num)) {
       continue;
     }
 
@@ -194,7 +193,6 @@ bool cxlt3_c::check_ready(uop_s* cur_uop) {
   return ready;
 }
 
-// TODO : use uops from m_pend_uop_queue and process them
 void cxlt3_c::process_pending_uops() {
   std::vector<cxl_req_s*> tmp_list;
   for (auto it = m_pend_uop_queue.begin(); it != m_pend_uop_queue.end(); it++) {
@@ -206,9 +204,13 @@ void cxlt3_c::process_pending_uops() {
     // TODO : add issue queue size & implement back-pressure
     if (check_ready(cur_uop)) {
       m_issue_queue.push_back(req);
-    }
+      tmp_list.push_back(req);
 
-    tmp_list.push_back(req);
+      if (*KNOB(KNOB_DEBUG_MISC)) {
+        std::cout << " ISSUE: ";
+        cur_uop->print();
+      }
+    }
   }
 
   for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
@@ -218,6 +220,7 @@ void cxlt3_c::process_pending_uops() {
 
 // TODO : memory reqs that are prefetch requests?
 void cxlt3_c::process_issue_queue() {
+  int issue_cnt = 0;
   std::vector<cxl_req_s*> tmp_list;
   for (auto it = m_issue_queue.begin(); it != m_issue_queue.end(); it++) {
     auto req = *it;
@@ -226,13 +229,13 @@ void cxlt3_c::process_issue_queue() {
     if (cur_uop->m_mem_type == NOT_MEM) {
       // TODO : implement ports to model execution unit BW
       cur_uop->m_exec_cycle = m_cycle;
-      cur_uop->m_done_cycle = m_cycle + cur_uop->m_latency;
+      cur_uop->m_done_cycle = m_cycle + cur_uop->m_latency; // Clock Skew?
 
       tmp_list.push_back(req);
       m_exec_queue.push_back(req);
-    } else {
-/* assert(req->m_addr == cur_uop->m_addr); */
 
+      issue_cnt++;
+    } else { // memory instructions
       if (push_ramu_req(req)) {
         cur_uop->m_exec_cycle = m_cycle;
         tmp_list.push_back(req);
@@ -243,6 +246,10 @@ void cxlt3_c::process_issue_queue() {
   for (auto it = tmp_list.begin(), end = tmp_list.end(); it != end; ++it) {
     m_issue_queue.remove(*it);
   }
+
+  if (*KNOB(KNOB_DEBUG_MISC)) {
+    std::cout << "COUNT_ISSUE : " << m_cycle << " : " << issue_cnt << std::endl;
+  }
 }
 
 void cxlt3_c::process_exec_queue() {
@@ -252,8 +259,17 @@ void cxlt3_c::process_exec_queue() {
     auto cur_uop = req->m_uop;
 
     if (cur_uop->m_done_cycle <= m_cycle) {
-      m_mxp_resp_queue.push_back(req);
+      if (*KNOB(KNOB_DEBUG_MISC)) {
+        std::cout << "EXEC : " << m_cycle << " : ";
+        cur_uop->print();
+      }
+
       tmp_list.push_back(req);
+      if (*KNOB(KNOB_UOP_DIRECT_OFFLOAD)) {
+        m_simBase->request_done(req);
+      } else {
+        m_mxp_resp_queue.push_back(req);
+      }
     }
   }
 
@@ -279,7 +295,6 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
   auto cb_func = (is_write) ? m_write_cb_func : m_read_cb_func;
 
   ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id, req->m_isuop);
-/* ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id); */
   bool accepted = m_ramu_wrapper->send(ramu_req);
 
   if (accepted) {
@@ -292,10 +307,7 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 
       ++m_mxp_requestsInFlight;
     }
-/* if (is_write) m_mxp_writes[ramu_req.addr].push_back(req); */
-/* else m_mxp_reads[ramu_req.addr].push_back(req); */
-/* ++m_mxp_requestsInFlight; */
-
+    req->m_dram_start = m_cycle;
     return true;
   } else {
     return false;
@@ -306,10 +318,6 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
   cxl_req_s* req;
   if (ramu_req.is_pim) { // pim req returned
-    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-      printf("CXL RAM UOP_READ done: 0x%lx %d\n", ramu_req.addr);
-    }
-
     auto &req_q = m_uop_reads.find(ramu_req.addr)->second;
     req = req_q.front();
     req_q.pop_front();
@@ -320,11 +328,12 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
 
     cur_uop->m_done_cycle = m_cycle;
     m_exec_queue.push_back(req);
-  } else { // normal req returned
-    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-      printf("CXL RAM read done: 0x%lx %d\n", ramu_req.addr);
-    }
 
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      std::cout << "CXL UOP_READ done: " << cur_uop->m_unique_num
+        << " lat: " << (m_cycle - req->m_dram_start) << std::endl;
+    }
+  } else { // normal req returned
     auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
     req = req_q.front();
     req_q.pop_front();
@@ -332,24 +341,18 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
 
     --m_mxp_requestsInFlight;
     m_mxp_resp_queue.push_back(req);
-  }
-/* auto &req_q = m_mxp_reads.find(ramu_req.addr)->second; */
-/* req = req_q.front(); */
-/* req_q.pop_front(); */
-/* if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr); */
 
-/* --m_mxp_requestsInFlight; */
-/* m_mxp_resp_queue.push_back(req); */
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      std::cout << "CXL READ done: " << ramu_req.addr 
+                << " lat: " << (m_cycle - req->m_dram_start) << std::endl;
+    }
+  }
 }
 
 // ramulator write callback
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   cxl_req_s* req;
   if (ramu_req.is_pim) { // pim req returned
-    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-      printf("CXL RAM UOP_WRITE callback done: 0x%lx\n", ramu_req.addr);
-    }
-
     auto &req_q = m_uop_writes.find(ramu_req.addr)->second;
     req = req_q.front();
     req_q.pop_front();
@@ -360,11 +363,12 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
 
     cur_uop->m_done_cycle = m_cycle;
     m_exec_queue.push_back(req);
-  } else { // normal req returned
-    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-      printf("CXL RAM write callback done: 0x%lx\n", ramu_req.addr);
-    }
 
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      std::cout << "CXL UOP_WRITE done: " << cur_uop->m_unique_num
+        << " lat: " << (m_cycle - req->m_dram_start) << std::endl;
+    }
+  } else { // normal req returned
     auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;
     req = req_q.front();
     req_q.pop_front();
@@ -372,14 +376,12 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
 
     --m_mxp_requestsInFlight;
     m_mxp_resp_queue.push_back(req);
-  }
-/* auto &req_q = m_mxp_writes.find(ramu_req.addr)->second; */
-/* req = req_q.front(); */
-/* req_q.pop_front(); */
-/* if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr); */
 
-/* --m_mxp_requestsInFlight; */
-/* m_mxp_resp_queue.push_back(req); */
+    if (*KNOB(KNOB_DEBUG_CALLBACK)) {
+      std::cout << "CXL WRITE done: " << ramu_req.addr 
+                << " lat: " << (m_cycle - req->m_dram_start) << std::endl;
+    }
+  }
 }
 
 // print for debugging
@@ -421,6 +423,28 @@ void cxlt3_c::print_cxlt3_info() {
     std::cout << "Addr: " << std::hex << addr << ": ";
   }
   std::cout << std::endl;
+}
+
+void cxlt3_c::print_cxlt3_uops() {
+  std::cout << " ---------- " << m_cycle << " ---------- " << std::endl;
+  std::cout << "pend q" << std::endl;
+  for (auto req : m_pend_uop_queue) {
+    auto uop = req->m_uop;
+    uop->print();
+  }
+
+  std::cout << "issue q" << std::endl;
+  for (auto req : m_issue_queue) {
+    auto uop = req->m_uop;
+    uop->print();
+  }
+
+  std::cout << "exec q" << std::endl;
+  for (auto req : m_exec_queue) {
+    auto uop = req->m_uop;
+    uop->print();
+  }
+  std::cout << "=========================================" << std::endl;
 }
 
 }

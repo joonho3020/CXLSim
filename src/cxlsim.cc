@@ -149,14 +149,8 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
     }
 
     // assign a new uop
-    // - TODO : code cleanup
     uop_s* new_uop = m_uop_pool->acquire_entry(this);
-    new_uop->m_unique_num = unique_id;
-    new_uop->m_uop_type = (Uop_Type)(uop_type);
-    new_uop->m_mem_type = (Mem_Type)(mem_type);
-    new_uop->m_addr = addr;
-    new_uop->m_latency = latency;
-    new_uop->m_src_rdy = false;
+    new_uop->init_uop(unique_id, uop_type, mem_type, addr, latency);
     int src_cnt = 0;
     for (int ii = 0; ii < (int)src_uop_list.size(); ii++) {
       Counter src_unique_id = src_uop_list[ii].first;
@@ -177,12 +171,16 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
     cxl_req_s* new_req = m_req_pool->acquire_entry(this);
     new_req->init(addr, false, true, new_uop, req);
 
-    m_rc->insert_request(new_req);
+    if (m_knobs->KNOB_UOP_DIRECT_OFFLOAD->getValue()) { // something similar to mmio
+      m_mxp->push_uop_direct(new_req);
+    } else { // go through pcie
+      m_rc->insert_request(new_req);
+    }
 
     // debug messages
-    if (m_knobs->KNOB_DEBUG_UOP->getValue()) {
-      new_uop->print();
-    }
+/* if (m_knobs->KNOB_DEBUG_UOP->getValue()) { */
+/* new_uop->print(); */
+/* } */
 
     return true;
   }
@@ -345,7 +343,6 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   if (req->m_isuop) {
     uop_s* cur_uop = req->m_uop;
     Counter unique_num = cur_uop->m_unique_num;
-/* assert(m_uop_map.find(unique_num) != m_uop_map.end()); */
 
     // update uop table
     m_uop_map.erase(unique_num);

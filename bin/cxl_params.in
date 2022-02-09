@@ -1,4 +1,3 @@
-
 # Simulation Configuration
 num_sim_cores 1
 
@@ -46,11 +45,13 @@ pcie_max_flit_wait_cycle 2
 # ramulator
 ramulator_config_file DDR3-config.cfg
 
+# NDP
+uop_direct_offload 1
+
 # DEBUG
 debug_io_sys 0
 debug_callback 1
 debug_uop 1
-
 
 # OUTPUT Redirect
 out ../stats

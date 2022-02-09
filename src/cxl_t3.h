@@ -77,10 +77,18 @@ public:
    */
   void run_a_cycle_internal(bool pll_locked);
 
+  /*
+   * Instead of sending uops through the PCIe interconnect, ignore their latency
+   * - this behavior is closer to how accelerators work
+   */
+  void push_uop_direct(cxl_req_s* req);
+
   /**
    * Print for debugging
    */
   void print_cxlt3_info();
+
+  void print_cxlt3_uops();
 
 private:
   /**
@@ -103,10 +111,16 @@ private:
    */
   void process_pending_uops();
 
+  /**
+   * Process issue queue (uops that are ready to execute)
+   */
   void process_issue_queue();
+
+  /**
+   * Process exec queue (uops that are executing)
+   */
   void process_exec_queue();
   bool check_ready(uop_s* cur_uop);
-
 
   /**
    * Push request to ramulator

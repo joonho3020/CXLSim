@@ -112,6 +112,12 @@ public:
    */
   void finalize();
 
+  /* 
+   * Called when a request returns to the RC, internally calls the 
+   * registered callback function
+   */
+  void request_done(cxl_req_s* req);
+
   ////////////////////////////////////////////////////////////////////////////
 
 private:
@@ -122,12 +128,6 @@ private:
   void init_knobs(int argc, char **argv);
   void init_stats();
   void init_clock_domain();
-
-  /* 
-   * Called when a request returns to the RC, internally calls the 
-   * registered callback function
-   */
-  void request_done(cxl_req_s* req);
 
 public:
   pcie_rc_c* m_rc; /**< Root Complex */

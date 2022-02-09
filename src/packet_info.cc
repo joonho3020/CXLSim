@@ -52,6 +52,7 @@ cxl_req_s::cxl_req_s(cxlsim_c* simBase) {
 
 void cxl_req_s::init(void) {
   m_id = 0;
+  m_dram_start = 0;
   m_addr = 0;
   m_write = false;
   m_isuop = false;
@@ -61,6 +62,7 @@ void cxl_req_s::init(void) {
 
 void cxl_req_s::init(Addr addr, bool write, bool isuop, uop_s* uop, void* req) {
   m_addr = addr;
+  m_dram_start = 0;
   m_write = write;
   m_isuop = isuop;
   m_uop = uop;
