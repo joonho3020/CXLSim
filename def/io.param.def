@@ -73,6 +73,7 @@ param<DEBUG_IO_SYS, debug_io_sys, int, 0>
 param<DEBUG_CALLBACK, debug_callback, int, 0>
 param<DEBUG_UOP, debug_uop, int, 0>
 param<DEBUG_MISC, debug_misc, int, 0>
+param<DEBUG_CACHE, debug_cache, int, 0>
 
 /* Ramulator configs */
 param<RAMULATOR_CONFIG_FILE, ramulator_config_file, std::string, DDR4-config.cfg>
@@ -84,3 +85,11 @@ param<PCIE_INSERTQ_SIZE, pcie_insertq_size, int, 32>
 
 /* NDP related configs */
 param<UOP_DIRECT_OFFLOAD, uop_direct_offload, bool, false>
+
+/* NDP cache related configs */
+param<CACHELINE_OFFSET_BITS, cacheline_offset_bits, int, 6>
+param<NDP_CACHE_SET, ndp_cache_set, int, 64>
+param<NDP_CACHE_ASSOC, ndp_cache_assoc, int, 8>
+param<NDP_CACHE_LAT, ndp_cache_lat, int, 3>
+param<NDP_MSHR_ASSOC, ndp_mshr_assoc, int, 32>
+param<NDP_MSHR_CAP, ndp_mshr_cap, int, 4>

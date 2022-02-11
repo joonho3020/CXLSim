@@ -251,6 +251,7 @@ void cxlsim_c::init_sim_objects() {
   //    init(id, master, msg_pool,   flit_pool,   peer)
   m_rc->init( 0, true,   m_msg_pool, m_flit_pool, m_mxp);
   m_mxp->init(1, false,  m_msg_pool, m_flit_pool, m_rc);
+  m_mxp->init_cache();
 }
 
 void cxlsim_c::init_knobs(int argc, char** argv) {

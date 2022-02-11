@@ -39,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "cxl_t3.h"
 #include "pcie_rc.h"
+#include "cache.h"
 #include "cxlsim.h"
 
 #include "all_knobs.h"
@@ -69,6 +70,8 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
     configs, *KNOB(KNOB_RAMULATOR_CACHELINE_SIZE),
     *KNOB(KNOB_STATISTICS_OUT_DIRECTORY));
 
+  m_cache = new cache_c(m_simBase);
+
   // init others
   m_cycle_internal = 0;
 }
@@ -77,11 +80,25 @@ cxlt3_c::~cxlt3_c() {
   m_ramu_wrapper->finish();
   delete m_ramu_wrapper;
   delete m_pending_req;
+  delete m_cache;
+}
+
+void cxlt3_c::init_cache() {
+  m_cache->init_cache(*KNOB(KNOB_NDP_CACHE_SET),
+                      *KNOB(KNOB_NDP_CACHE_ASSOC),
+                      *KNOB(KNOB_NDP_CACHE_LAT));
+
+  m_cache->init_mshr(*KNOB(KNOB_NDP_MSHR_ASSOC),
+                     *KNOB(KNOB_NDP_MSHR_CAP));
 }
 
 void cxlt3_c::run_a_cycle(bool pll_locked) {
   if (*KNOB(KNOB_DEBUG_UOP)) {
     print_cxlt3_uops();
+  }
+
+  if (*KNOB(KNOB_DEBUG_CACHE)) {
+    m_cache->print();
   }
 
   // send response
@@ -236,9 +253,32 @@ void cxlt3_c::process_issue_queue() {
 
       issue_cnt++;
     } else { // memory instructions
-      if (push_ramu_req(req)) {
+      if (m_cache->lookup(cur_uop->m_addr)) { // cache hit
         cur_uop->m_exec_cycle = m_cycle;
+        cur_uop->m_done_cycle = m_cycle + m_cache->get_lat();
+
         tmp_list.push_back(req);
+        m_exec_queue.push_back(req);
+
+        STAT_EVENT(CACHE_HIT_RATE_BASE);
+        STAT_EVENT(CACHE_HIT_RATE);
+      } else { // cache miss
+        if (m_cache->is_first_miss(cur_uop->m_addr)) { // first miss to pfn
+          if (m_cache->has_free_mshr() && push_ramu_req(req)) {
+            cur_uop->m_exec_cycle = m_cycle;
+            assert(m_cache->insert_mshr(req));
+            tmp_list.push_back(req);
+
+            STAT_EVENT(CACHE_HIT_RATE_BASE);
+            STAT_EVENT(CACHE_MISS_RATE);
+          }
+        } else if (m_cache->insert_mshr(req)) { // insert req into mshr
+          cur_uop->m_exec_cycle = m_cycle;
+          tmp_list.push_back(req);
+
+          STAT_EVENT(CACHE_HIT_RATE_BASE);
+          STAT_EVENT(CACHE_MISS_RATE);
+        }
       }
     }
   }
@@ -326,8 +366,11 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
     auto cur_uop = req->m_uop;
     assert(cur_uop);
 
-    cur_uop->m_done_cycle = m_cycle;
-    m_exec_queue.push_back(req);
+/* cur_uop->m_done_cycle = m_cycle; */
+/* m_exec_queue.push_back(req); */
+
+    free_mshr(cur_uop->m_addr);
+    m_cache->insert(cur_uop->m_addr);
 
     if (*KNOB(KNOB_DEBUG_CALLBACK)) {
       std::cout << "CXL UOP_READ done: " << cur_uop->m_unique_num
@@ -361,8 +404,11 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
     auto cur_uop = req->m_uop;
     assert(cur_uop);
 
-    cur_uop->m_done_cycle = m_cycle;
-    m_exec_queue.push_back(req);
+/* cur_uop->m_done_cycle = m_cycle; */
+/* m_exec_queue.push_back(req); */
+
+    free_mshr(cur_uop->m_addr);
+    m_cache->insert(cur_uop->m_addr);
 
     if (*KNOB(KNOB_DEBUG_CALLBACK)) {
       std::cout << "CXL UOP_WRITE done: " << cur_uop->m_unique_num
@@ -381,6 +427,18 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
       std::cout << "CXL WRITE done: " << ramu_req.addr 
                 << " lat: " << (m_cycle - req->m_dram_start) << std::endl;
     }
+  }
+}
+
+void cxlt3_c::free_mshr(Addr addr) {
+  auto merged_reqs = m_cache->get_mshr_entries(addr);
+  if (merged_reqs != NULL) {
+    for (auto merged_req : *merged_reqs) {
+      auto merged_uop = merged_req->m_uop;
+      merged_uop->m_done_cycle = m_cycle;
+      m_exec_queue.push_back(merged_req);
+    }
+    m_cache->clear_mshr(addr);
   }
 }
 

@@ -48,10 +48,19 @@ ramulator_config_file DDR3-config.cfg
 # NDP
 uop_direct_offload 1
 
+# NDP cache
+page_offset_bits 12
+ndp_cache_set 4
+ndp_cache_assoc 2
+ndp_cache_lat 3
+ndp_mshr_assoc 2
+ndp_mshr_cap 2
+
 # DEBUG
 debug_io_sys 0
-debug_callback 1
-debug_uop 1
+debug_callback 0
+debug_uop 0
+debug_cache 1
 
 # OUTPUT Redirect
 out ../stats

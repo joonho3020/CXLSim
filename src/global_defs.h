@@ -12,6 +12,8 @@ class pcie_ep_c;
 class pcie_rc_c;
 class cxlt3_c;
 
+class cache_c;
+
 class KnobsContainer;
 class ProcessorStatistics;
 class CoreStatistics;
@@ -21,6 +23,10 @@ template <class T> class pool_c;
 template <typename T> class knob_c;
 
 // structs
+typedef struct cache_line_s cache_line_s;
+typedef struct cache_set_s cache_set_s;
+typedef struct mshr_entry_s mshr_entry_s;
+typedef struct mshr_s mshr_s;
 typedef struct uop_s uop_s;
 typedef struct cxl_req_s cxl_req_s;
 typedef struct message_s message_s;

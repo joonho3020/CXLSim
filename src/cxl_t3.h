@@ -46,6 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxlsim.h"
 #include "pcie_endpoint.h"
 #include "packet_info.h"
+#include "cache.h"
 
 #include "ramulator_wrapper.h"
 #include "ramulator/src/Request.h"
@@ -66,6 +67,11 @@ public:
    * Destructor
    */
   ~cxlt3_c();
+
+  /**
+   * initialize cache
+   */
+  void init_cache();
 
   /**
    * Tick a cycle
@@ -137,6 +143,8 @@ private:
    */
   void writeComplete(ramulator::Request &ramu_req);
 
+  void free_mshr(Addr addr);
+
 private:
   // mxp queues
   unsigned int m_mxp_requestsInFlight;
@@ -159,6 +167,7 @@ private:
   std::list<cxl_req_s*> m_pend_uop_queue; /**< uops to be processed */
   std::list<cxl_req_s*> m_issue_queue; /**< uops issued */
   std::list<cxl_req_s*> m_exec_queue; /**< uops executed */
+  cache_c* m_cache; /**< Cache for NDP */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
 };

@@ -17,6 +17,7 @@ SET(CXLLIB_SOURCES
   ramulator_wrapper.cc
   statistics.cc
   uop.cc
+  cache.cc
 )
 
 SET(RAMULATOR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ramulator)

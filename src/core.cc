@@ -194,7 +194,7 @@ void core_c::run_sim() {
       while (std::getline(file, line)) {
         Addr addr;
         int type;
-        std::sscanf(line.c_str(), "%llx %d", &addr, &type);
+        std::sscanf(line.c_str(), "%lld %d", &addr, &type);
 
         insert_request(addr, type);
         tot_reqs++;
