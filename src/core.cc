@@ -133,8 +133,9 @@ void core_c::insert_request(Addr addr, int type) {
     src_uop_list.push_back({m_unique_num, 1});
 
     int latency = 3; // just an example
+    int core_id = 0;
     auto uop_info = set_uop_type(type);
-    success = m_simBase->insert_uop_request((void*)new_req, uop_info.first, 
+    success = m_simBase->insert_uop_request((void*)new_req, core_id, uop_info.first, 
                                             uop_info.second, addr, 
                                             ++m_unique_num, latency, src_uop_list);
   }
@@ -165,8 +166,9 @@ void core_c::run_a_cycle(bool pll_locked) {
       src_uop_list.push_back({m_unique_num, 1});
 
       int latency = 3; // just an example
+      int core_id = 0;
       auto uop_info = set_uop_type(req->m_type);
-      success = m_simBase->insert_uop_request((void*)req, 
+      success = m_simBase->insert_uop_request((void*)req, core_id,
                                         uop_info.first, uop_info.second, 
                                         req->m_addr, ++m_unique_num, 
                                         latency, src_uop_list);

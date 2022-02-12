@@ -49,6 +49,7 @@ uop_s::uop_s(cxlsim_c* simBase) {
 }
 
 void uop_s::init(void) {
+  m_core_id = -1;
   m_uop_type = UOP_NOP;
   m_mem_type = NOT_MEM;
   m_valid = false;
@@ -64,8 +65,9 @@ void uop_s::init(void) {
   }
 }
 
-void uop_s::init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr,
+void uop_s::init_uop(int core_id, Counter unique_id, int uop_type, int mem_type, Addr addr,
     int latency) {
+  m_core_id = core_id;
   m_unique_num = unique_id;
   m_uop_type = (Uop_Type)(uop_type);
   m_mem_type = (Mem_Type)(mem_type);

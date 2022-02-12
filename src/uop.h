@@ -170,12 +170,13 @@ typedef struct uop_s {
    */
   uop_s(cxlsim_c* simBase);
   void init(void);
-  void init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr, int latency);
+  void init_uop(int core_id, Counter unique_id, int uop_type, int mem_type, Addr addr, int latency);
   bool is_write(void);
   void print(void);
   Exec_Unit_Type get_exec_unit(void);
 
 
+  int m_core_id; /**< core id of uop */
   Counter m_unique_num; /**< unique uop number */
   Uop_Type m_uop_type; /**< uop type */
   Mem_Type m_mem_type; /**< memory access type */

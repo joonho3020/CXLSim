@@ -98,7 +98,7 @@ public:
   /**
    * insert a uop request to the CXL mem 
    */
-  bool insert_uop_request(void* req, int uop_type, int mem_type,
+  bool insert_uop_request(void* req, int core_id, int uop_type, int mem_type,
       Addr addr, Counter unique_id, int latency,
       std::vector<std::pair<Counter, int>> src_uop_list);
 

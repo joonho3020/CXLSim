@@ -136,7 +136,7 @@ bool cxlsim_c::insert_mem_request(Addr addr, bool write, void* req) {
   }
 }
 
-bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
+bool cxlsim_c::insert_uop_request(void* req, int core_id, int uop_type, int mem_type,
                           Addr addr, Counter unique_id, int latency,
                           std::vector<std::pair<Counter, int>> src_uop_list) {
   if (m_rc->rootcomplex_full()) {
@@ -150,7 +150,7 @@ bool cxlsim_c::insert_uop_request(void* req, int uop_type, int mem_type,
 
     // assign a new uop
     uop_s* new_uop = m_uop_pool->acquire_entry(this);
-    new_uop->init_uop(unique_id, uop_type, mem_type, addr, latency);
+    new_uop->init_uop(core_id, unique_id, uop_type, mem_type, addr, latency);
     int src_cnt = 0;
     for (int ii = 0; ii < (int)src_uop_list.size(); ii++) {
       Counter src_unique_id = src_uop_list[ii].first;
