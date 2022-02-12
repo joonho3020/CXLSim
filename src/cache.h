@@ -122,14 +122,14 @@ public:
 private:
   inline Addr get_tag(Addr addr);
   inline int get_set(Addr addr);
-  inline Addr get_pfn(Addr addr);
+  inline Addr get_cacheline(Addr addr);
   std::pair<int, Addr> get_settag(Addr addr);
 
 private:
   int m_set_cnt;
   int m_set_bits;
   int m_set_mask;
-  int m_page_offset;
+  int m_cacheline_offset;
   std::vector<cache_set_s*> m_sets;
   Counter m_lat;
 

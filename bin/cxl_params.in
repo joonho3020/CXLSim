@@ -49,12 +49,13 @@ ramulator_config_file DDR3-config.cfg
 uop_direct_offload 1
 
 # NDP cache
-cacheline_offset_bits 12
+cacheline_offset_bits 6
 ndp_cache_set 4
 ndp_cache_assoc 2
 ndp_cache_lat 3
 ndp_mshr_assoc 2
 ndp_mshr_cap 2
+ndp_scheduler in_order
 
 # DEBUG
 debug_io_sys 0

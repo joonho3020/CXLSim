@@ -229,7 +229,8 @@ void cache_c::init_cache(int set, int assoc, Counter lat) {
 
   m_set_bits = (int)log2((float)m_set_cnt);
   m_set_mask = m_set_cnt - 1;
-  m_page_offset = *KNOB(KNOB_CACHELINE_OFFSET_BITS);
+  m_cacheline_offset = *KNOB(KNOB_CACHELINE_OFFSET_BITS);
+/* m_page_offset = *KNOB(KNOB_PAGE_OFFSET_BITS); */
 }
 
 void cache_c::init_mshr(int assoc, int cap) {
@@ -238,15 +239,15 @@ void cache_c::init_mshr(int assoc, int cap) {
 }
 
 bool cache_c::insert_mshr(cxl_req_s* req) {
-  return m_mshr->insert(req, get_pfn(req->m_uop->m_addr));
+  return m_mshr->insert(req, get_cacheline(req->m_uop->m_addr));
 }
 
 std::vector<cxl_req_s*>* cache_c::get_mshr_entries(Addr addr) {
-  return m_mshr->get_entry(get_pfn(addr));
+  return m_mshr->get_entry(get_cacheline(addr));
 }
 
 void cache_c::clear_mshr(Addr addr) {
-  m_mshr->clear(get_pfn(addr));
+  m_mshr->clear(get_cacheline(addr));
 }
 
 bool cache_c::lookup(Addr addr) {
@@ -270,16 +271,16 @@ Counter cache_c::get_lat() {
 }
 
 inline Addr cache_c::get_tag(Addr addr) {
-  return (addr >> (m_set_bits + m_page_offset));
+  return (addr >> (m_set_bits + m_cacheline_offset));
 }
 
 inline int cache_c::get_set(Addr addr) {
-  Addr tag_set = (addr >> m_page_offset);
+  Addr tag_set = (addr >> m_cacheline_offset);
   return (int)(tag_set & m_set_mask);
 }
 
-inline Addr cache_c::get_pfn(Addr addr) {
-  return (addr >> m_page_offset);
+inline Addr cache_c::get_cacheline(Addr addr) {
+  return (addr >> m_cacheline_offset);
 }
 
 std::pair<int, Addr> cache_c::get_settag(Addr addr) {
@@ -287,7 +288,7 @@ std::pair<int, Addr> cache_c::get_settag(Addr addr) {
 }
 
 bool cache_c::is_first_miss(Addr addr) {
-  return m_mshr->is_first_miss(get_pfn(addr));
+  return m_mshr->is_first_miss(get_cacheline(addr));
 }
 
 bool cache_c::has_free_mshr() {

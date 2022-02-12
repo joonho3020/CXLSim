@@ -227,6 +227,8 @@ void cxlt3_c::process_pending_uops() {
         std::cout << " ISSUE: ";
         cur_uop->print();
       }
+    } else if (KNOB(KNOB_NDP_SCHEDULER)->getValue() == "in_order") {
+      break;
     }
   }
 
