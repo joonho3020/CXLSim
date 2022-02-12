@@ -129,11 +129,11 @@ void mshr_entry_s::print(void) {
 
 bool mshr_entry_s::insert(cxl_req_s* req) {
   assert(m_valid);
-  if (m_capacity >= (int)m_reqs.size()) {
-    return false;
-  } else {
+  if (m_capacity > (int)m_reqs.size()) { // has empty space
     m_reqs.push_back(req);
     return true;
+  } else {
+    return false;
   }
 }
 
