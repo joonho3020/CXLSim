@@ -13,6 +13,7 @@ class pcie_rc_c;
 class cxlt3_c;
 
 class cache_c;
+class port_c;
 
 class KnobsContainer;
 class ProcessorStatistics;

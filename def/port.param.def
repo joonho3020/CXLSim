@@ -1,0 +1,50 @@
+/*
+Copyright (c) <2012>, <Georgia Institute of Technology> All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted 
+provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions 
+and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this list of 
+conditions and the following disclaimer in the documentation and/or other materials provided 
+with the distribution.
+
+Neither the name of the <Georgia Institue of Technology> nor the names of its contributors 
+may be used to endorse or promote products derived from this software without specific prior 
+written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/* General IO */
+param<NOP_PORT_CNT, nop_port_cnt, int, 4>
+param<IADD_PORT_CNT, iadd_port_cnt, int, 4>
+param<IMUL_PORT_CNT, imul_port_cnt, int, 1>
+param<IDIV_PORT_CNT, idiv_port_cnt, int, 1>
+param<IMISC_PORT_CNT, imisc_port_cnt, int, 2>
+param<FADD_PORT_CNT, fadd_port_cnt, int, 2>
+param<FMUL_PORT_CNT, fmul_port_cnt, int, 1>
+param<FDIV_PORT_CNT, fdiv_port_cnt, int, 1>
+param<FMISC_PORT_CNT, fmisc_port_cnt, int, 2>
+param<CACHE_PORT_CNT, cache_port_cnt, int, 4>
+
+param<NOP_PORT_LAT, nop_port_lat, int, 1>
+param<IADD_PORT_LAT, iadd_port_lat, int, 1>
+param<IMUL_PORT_LAT, imul_port_lat, int, 4>
+param<IDIV_PORT_LAT, idiv_port_lat, int, 8>
+param<IMISC_PORT_LAT, imisc_port_lat, int, 2>
+param<FADD_PORT_LAT, fadd_port_lat, int, 8>
+param<FMUL_PORT_LAT, fmul_port_lat, int, 4>
+param<FDIV_PORT_LAT, fdiv_port_lat, int, 16>
+param<FMISC_PORT_LAT, fmisc_port_lat, int, 2>
+param<CACHE_PORT_LAT, cache_port_lat, int, 3>

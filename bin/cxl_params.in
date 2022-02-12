@@ -52,16 +52,38 @@ uop_direct_offload 1
 cacheline_offset_bits 6
 ndp_cache_set 4
 ndp_cache_assoc 2
-ndp_cache_lat 3
 ndp_mshr_assoc 2
 ndp_mshr_cap 2
 ndp_scheduler in_order
+
+nop_port_cnt 4
+iadd_port_cnt 4
+imul_port_cnt 1
+idiv_port_cnt 1
+imisc_port_cnt 2
+fadd_port_cnt 2
+fmul_port_cnt 1
+fdiv_port_cnt 1
+fmisc_port_cnt 2
+cache_port_cnt 4
+
+nop_port_lat 1
+iadd_port_lat 1
+imul_port_lat 4
+idiv_port_lat 8
+imisc_port_lat 2
+fadd_port_lat 8
+fmul_port_lat 4
+fdiv_port_lat 16
+fmisc_port_lat 2
+cache_port_lat 3
 
 # DEBUG
 debug_io_sys 0
 debug_callback 0
 debug_uop 0
-debug_cache 1
+debug_cache 0
+debug_port 1
 
 # OUTPUT Redirect
 out ../stats

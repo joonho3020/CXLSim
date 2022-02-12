@@ -101,9 +101,6 @@ typedef enum Uop_Type_enum {
   // MMX instructions
   UOP_SSE,
 
-  // SIMD instructions for Intel GPU
-  UOP_SIMD,
-
   // other instructions
   UOP_AES,  //!< AES enctyption
   UOP_PCLMUL,  //!< carryless multiplication
@@ -113,6 +110,22 @@ typedef enum Uop_Type_enum {
 
   NUM_UOP_TYPES,
 } Uop_Type;
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef enum Exec_Unit_Type_enum {
+  EXEC_NOP = 0, // nop
+  EXEC_IADD, // integer add, sub
+  EXEC_IMUL, // integer mul
+  EXEC_IDIV, // integer div
+  EXEC_IMISC, // integer miscellaneous
+  EXEC_FADD, // floating point add, sub
+  EXEC_FMUL, // floating point mul
+  EXEC_FDIV, // floating point div
+  EXEC_FMISC, // floating point miscellaneous
+  EXEC_CACHE, // cache port
+  MAX_EXEC_UNIT_TYPES
+} Exec_Unit_Type;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// \brief  Mem_Type breaks down the different types of memory operations into
@@ -160,6 +173,8 @@ typedef struct uop_s {
   void init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr, int latency);
   bool is_write(void);
   void print(void);
+  Exec_Unit_Type get_exec_unit(void);
+
 
   Counter m_unique_num; /**< unique uop number */
   Uop_Type m_uop_type; /**< uop type */

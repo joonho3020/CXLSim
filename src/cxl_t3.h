@@ -47,6 +47,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "pcie_endpoint.h"
 #include "packet_info.h"
 #include "cache.h"
+#include "port.h"
+#include "uop.h"
 
 #include "ramulator_wrapper.h"
 #include "ramulator/src/Request.h"
@@ -72,6 +74,8 @@ public:
    * initialize cache
    */
   void init_cache();
+
+  void init_ports();
 
   /**
    * Tick a cycle
@@ -145,6 +149,8 @@ private:
 
   void free_mshr(Addr addr);
 
+  bool check_port(uop_s* uop);
+
 private:
   // mxp queues
   unsigned int m_mxp_requestsInFlight;
@@ -168,6 +174,7 @@ private:
   std::list<cxl_req_s*> m_issue_queue; /**< uops issued */
   std::list<cxl_req_s*> m_exec_queue; /**< uops executed */
   cache_c* m_cache; /**< Cache for NDP */
+  std::vector<port_c*> m_ports; /**< Execution ports */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
 };

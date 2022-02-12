@@ -35,6 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************************************/
 
 #include <iostream>
+#include <cassert>
 
 #include "uop.h"
 #include "cxlsim.h"
@@ -76,6 +77,63 @@ void uop_s::init_uop(Counter unique_id, int uop_type, int mem_type, Addr addr,
 
 bool uop_s::is_write(void) {
   return m_mem_type == MEM_ST;
+}
+
+Exec_Unit_Type uop_s::get_exec_unit() {
+  switch (m_uop_type) {
+    case UOP_INV:
+    case UOP_SPEC:
+    case UOP_NOP:
+    case UOP_LFENCE:
+    case UOP_FULL_FENCE:
+    case UOP_ACQ_FENCE:
+    case UOP_REL_FENCE:
+    case UOP_X87:
+    case UOP_XSAVE:
+    case UOP_XSAVEOPT:
+      return EXEC_NOP;
+    case UOP_IADD:
+    case UOP_VADD:
+      return EXEC_IADD;
+    case UOP_IMUL:
+      return EXEC_IMUL;
+    case UOP_IDIV:
+      return EXEC_IDIV;
+    case UOP_CF:
+    case UOP_CMOV:
+    case UOP_LDA:
+    case UOP_ICMP:
+    case UOP_LOGIC:
+    case UOP_SHIFT:
+    case UOP_BYTE:
+    case UOP_MM:
+    case UOP_VSTR:
+    case UOP_SSE:
+      return EXEC_IMISC;
+    case UOP_FADD:
+    case UOP_VFADD:
+      return EXEC_FADD;
+    case UOP_FMUL:
+      return EXEC_FMUL;
+    case UOP_FDIV:
+      return EXEC_FDIV;
+    case UOP_FCF:
+    case UOP_FCVT:
+    case UOP_FCMP:
+    case UOP_FBIT:
+    case UOP_FCMOV:
+    case UOP_AES:
+    case UOP_PCLMUL:
+      return EXEC_FMISC;
+    case UOP_IMEM:
+    case UOP_FMEM:
+    case UOP_LD:
+    case UOP_ST:
+      return EXEC_CACHE;
+    default:
+      assert(0);
+      break;
+  }
 }
 
 void uop_s::print(void) {

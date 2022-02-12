@@ -41,6 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "pcie_rc.h"
 #include "cache.h"
 #include "cxlsim.h"
+#include "uop.h"
 
 #include "all_knobs.h"
 #include "statistics.h"
@@ -72,6 +73,8 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
 
   m_cache = new cache_c(m_simBase);
 
+  init_ports();
+
   // init others
   m_cycle_internal = 0;
 }
@@ -86,10 +89,52 @@ cxlt3_c::~cxlt3_c() {
 void cxlt3_c::init_cache() {
   m_cache->init_cache(*KNOB(KNOB_NDP_CACHE_SET),
                       *KNOB(KNOB_NDP_CACHE_ASSOC),
-                      *KNOB(KNOB_NDP_CACHE_LAT));
+                      *KNOB(KNOB_CACHE_PORT_LAT));
 
   m_cache->init_mshr(*KNOB(KNOB_NDP_MSHR_ASSOC),
                      *KNOB(KNOB_NDP_MSHR_CAP));
+}
+
+void cxlt3_c::init_ports() {
+  auto nop_port = new port_c(m_simBase);
+  nop_port->init(*KNOB(KNOB_NOP_PORT_CNT), *KNOB(KNOB_NOP_PORT_LAT));
+  m_ports.push_back(nop_port);
+
+  auto iadd_port = new port_c(m_simBase);
+  iadd_port->init(*KNOB(KNOB_IADD_PORT_CNT), *KNOB(KNOB_IADD_PORT_LAT));
+  m_ports.push_back(iadd_port);
+
+  auto imul_port = new port_c(m_simBase);
+  imul_port->init(*KNOB(KNOB_IMUL_PORT_CNT), *KNOB(KNOB_IMUL_PORT_LAT));
+  m_ports.push_back(imul_port);
+
+  auto idiv_port = new port_c(m_simBase);
+  idiv_port->init(*KNOB(KNOB_IDIV_PORT_CNT), *KNOB(KNOB_IDIV_PORT_LAT));
+  m_ports.push_back(idiv_port);
+
+  auto imisc_port = new port_c(m_simBase);
+  imisc_port->init(*KNOB(KNOB_IMISC_PORT_CNT), *KNOB(KNOB_IMISC_PORT_LAT));
+  m_ports.push_back(imisc_port);
+
+  auto fadd_port = new port_c(m_simBase);
+  fadd_port->init(*KNOB(KNOB_FADD_PORT_CNT), *KNOB(KNOB_FADD_PORT_LAT));
+  m_ports.push_back(fadd_port);
+
+  auto fmul_port = new port_c(m_simBase);
+  fmul_port->init(*KNOB(KNOB_FMUL_PORT_CNT), *KNOB(KNOB_FMUL_PORT_LAT));
+  m_ports.push_back(fmul_port);
+
+  auto fdiv_port = new port_c(m_simBase);
+  fdiv_port->init(*KNOB(KNOB_FDIV_PORT_CNT), *KNOB(KNOB_FDIV_PORT_LAT));
+  m_ports.push_back(fdiv_port);
+
+  auto fmisc_port = new port_c(m_simBase);
+  fmisc_port->init(*KNOB(KNOB_FMISC_PORT_CNT), *KNOB(KNOB_FMISC_PORT_LAT));
+  m_ports.push_back(fmisc_port);
+
+  auto cache_port = new port_c(m_simBase);
+  cache_port->init(*KNOB(KNOB_CACHE_PORT_CNT), *KNOB(KNOB_CACHE_PORT_LAT));
+  m_ports.push_back(cache_port);
 }
 
 void cxlt3_c::run_a_cycle(bool pll_locked) {
@@ -106,6 +151,10 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   process_txdll();
   process_txtrans();
   start_transaction();
+
+  // ports
+  for (auto port : m_ports)
+    port->run_a_cycle();
 
   // process ndp uops
   process_exec_queue();
@@ -218,16 +267,22 @@ void cxlt3_c::process_pending_uops() {
     auto cur_uop = req->m_uop;
     assert(cur_uop);
 
-    // TODO : add issue queue size & implement back-pressure
-    if (check_ready(cur_uop)) {
-      m_issue_queue.push_back(req);
-      tmp_list.push_back(req);
+    bool success = false;
+    if (check_ready(cur_uop)) { // check dependencies
+      if (check_port(cur_uop)) { // check execution ports
+        m_issue_queue.push_back(req);
+        tmp_list.push_back(req);
+        success = true;
 
-      if (*KNOB(KNOB_DEBUG_MISC)) {
-        std::cout << " ISSUE: ";
-        cur_uop->print();
+        if (*KNOB(KNOB_DEBUG_MISC)) {
+          std::cout << " ISSUE: ";
+          cur_uop->print();
+        }
       }
-    } else if (KNOB(KNOB_NDP_SCHEDULER)->getValue() == "in_order") {
+    } 
+
+    if ((KNOB(KNOB_NDP_SCHEDULER)->getValue() == "in_order") &&
+        success == false) {
       break;
     }
   }
@@ -246,7 +301,6 @@ void cxlt3_c::process_issue_queue() {
     auto cur_uop = req->m_uop;
     
     if (cur_uop->m_mem_type == NOT_MEM) {
-      // TODO : implement ports to model execution unit BW
       cur_uop->m_exec_cycle = m_cycle;
       cur_uop->m_done_cycle = m_cycle + cur_uop->m_latency; // Clock Skew?
 
@@ -442,6 +496,16 @@ void cxlt3_c::free_mshr(Addr addr) {
     }
     m_cache->clear_mshr(addr);
   }
+}
+
+bool cxlt3_c::check_port(uop_s* uop) {
+  auto exec_unit = uop->get_exec_unit();
+
+  if (*KNOB(KNOB_DEBUG_PORT)) {
+    m_ports[exec_unit]->print();
+  }
+
+  return m_ports[exec_unit]->check_port();
 }
 
 // print for debugging
