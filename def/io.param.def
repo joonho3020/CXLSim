@@ -34,7 +34,6 @@ param<CLOCK_CXLRAM, clock_cxlram, float, 1.2>
 param<PCIE_LANES, pcie_lanes, int, 8>
 param<PCIE_PER_LANE_BW, pcie_per_lane_bw, float, 32>
 
-param<PCIE_VC_CNT, pcie_vc_cnt, int, 4>
 param<PCIE_TXVC_CAPACITY, pcie_txvc_capacity, int, 8>
 param<PCIE_RXVC_CAPACITY, pcie_rxvc_capacity, int, 8>
 param<PCIE_RXVC_BW, pcie_rxvc_bw, int, 4>

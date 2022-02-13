@@ -11,9 +11,6 @@ pcie_lanes 16
 pcie_per_lane_bw 32
 pcie_rxvc_bw 4
 
-# Don't touch
-pcie_vc_cnt 4
-
 # Capacity params
 pcie_txvc_capacity 8
 pcie_rxvc_capacity 8
@@ -44,7 +41,7 @@ pcie_uop_msg_bits 64
 pcie_max_flit_wait_cycle 2
 
 # ramulator
-ramulator_config_file DDR3-config.cfg
+ramulator_config_file DDR4-config.cfg
 
 # NDP
 uop_direct_offload 1
@@ -82,10 +79,10 @@ cache_port_lat 3
 
 # DEBUG
 debug_io_sys 0
-debug_callback 0
+debug_callback 1
 debug_uop 0
 debug_cache 0
-debug_port 1
+debug_port 0
 
 # OUTPUT Redirect
 out ../stats

@@ -101,6 +101,17 @@ void message_s::init(void) {
   m_req = NULL;
 }
 
+bool message_s::is_wdata_msg(void) {
+  return m_vc_id == WD_CHANNEL;
+}
+
+bool message_s::txvc_rdy(Counter cycle) {
+  return m_txvc_start >= cycle;
+}
+bool message_s::rxvc_rdy(Counter cycle) {
+  return m_rxvc_start >= cycle;
+}
+
 void message_s::print(void) {
   Addr addr = m_req ? m_req->m_addr : 0x00;
   std::string msg_type = m_data ? "DATA" 
@@ -129,6 +140,11 @@ void flit_s::init(void) {
   m_rxdll_end = 0;
 
   m_msgs.clear();
+}
+
+void flit_s::insert_msg(message_s* msg) {
+  m_bits += msg->m_bits;
+  m_msgs.push_back(msg);
 }
 
 void flit_s::print(void) {
