@@ -203,7 +203,7 @@ void cxlt3_c::start_transaction() {
 // transactions ends in the viewpoint of RC
 // read messages from the rx vc & insert them into the dram pending queue
 void cxlt3_c::end_transaction() {
-  while (1) {
+  for (int ii = 0; ii < this->get_rxvc_bw(); ii++) {
     cxl_req_s* req = pull_rxvc();
     if (!req) {
       break;

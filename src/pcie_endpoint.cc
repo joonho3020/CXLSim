@@ -71,6 +71,7 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_rxvc_cap = *KNOB(KNOB_PCIE_RXVC_CAPACITY);
   m_txvc_buff = new std::list<message_s*>[m_vc_cnt];
   m_rxvc_buff = new std::list<message_s*>[m_vc_cnt];
+  m_rxvc_bw = *KNOB(KNOB_PCIE_RXVC_BW);
 
   ASSERTM(m_vc_cnt == MAX_CHANNEL, "currently only 4 virtual channels exist\n");
 
@@ -624,6 +625,10 @@ void pcie_ep_c::process_rxdll() {
 
 void pcie_ep_c::process_rxtrans() {
   return;
+}
+
+int pcie_ep_c::get_rxvc_bw() {
+  return m_rxvc_bw;
 }
 
 void pcie_ep_c::print_ep_info() {

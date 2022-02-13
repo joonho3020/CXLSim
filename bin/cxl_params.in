@@ -19,6 +19,7 @@ pcie_rxvc_capacity 8
 pcie_txdll_capacity 8
 pcie_phys_capacity 8
 pcie_txreplay_capacity 8
+pcie_rxvc_bw 4
 
 # Latency params
 pcie_txtrans_latency 5

@@ -87,7 +87,7 @@ void pcie_rc_c::start_transaction() {
 }
 
 void pcie_rc_c::end_transaction() {
-  while (1) {
+  for (int ii = 0; ii < this->get_rxvc_bw(); ii++) {
     cxl_req_s* req = pull_rxvc();
     if (!req) {
       break;

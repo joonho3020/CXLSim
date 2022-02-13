@@ -241,6 +241,8 @@ protected:
   void process_rxdll();
   void process_rxtrans();
 
+  int get_rxvc_bw();
+
 public:
   /**
    * Counters used for msg/flit id
@@ -264,6 +266,7 @@ private:
   int m_rxvc_cap; /**< VC buffer capacity */
   std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
   std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
+  int m_rxvc_bw; /**< VC buffer BW */
 
   int m_flit_ndr_cnt; /**< NDR req count for current flit */
   int m_flit_drs_cnt; /**< DRS req count for current flit */
