@@ -71,7 +71,8 @@ typedef enum MSG_TYPE {
   S2M_NDR,
   S2M_DRS,
   S2M_DATA,
-  INVALID
+  INVALID,
+  MAX_MSG_TYPES
 } MSG_TYPE;
 
 typedef struct message_s {
@@ -81,6 +82,9 @@ typedef struct message_s {
   message_s(cxlsim_c* simBase);
   void init(void);
   void print(void);
+  bool is_wdata_msg(void);
+  bool txvc_rdy(Counter cycle);
+  bool rxvc_rdy(Counter cycle);
 
   int m_id; /**< unique request id */
   int m_bits;
@@ -110,6 +114,7 @@ typedef struct flit_s {
   flit_s(cxlsim_c* simBase);
   void init(void);
   void print(void);
+  void insert_msg(message_s* msg);
 
   int m_id;
   int m_bits;

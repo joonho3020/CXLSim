@@ -53,6 +53,55 @@ namespace cxlsim {
 #define WD_CHANNEL 1
 #define DATA_CHANNEL 2
 
+///////////////////////////////////////////////////////////////////////////////
+class vc_buff_c {
+public:
+  vc_buff_c(cxlsim_c* simBase);
+  void init(bool is_tx, bool is_master, 
+            pool_c<message_s>* msg_pool, 
+            pool_c<flit_s>* flit_pool,
+            int capacity);
+  bool full(int vc_id); /**< true if vc_id is full, otherwise false */
+  bool empty(int vc_id);
+  int free(int vc_id); /**< number of free entries */
+  int get_channel(cxl_req_s* req);
+  void insert(cxl_req_s* req); // generate msg inside
+  void generate_flits();
+  flit_s* peak_flit();
+  void pop_flit();
+  message_s* pull_msg(int vc_id);
+  void receive_flit(flit_s* flit);
+  void run_a_cycle();
+  void print();
+
+private:
+  void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
+  void insert_channel(int vc_id, message_s* msg);
+  void remove_msg(message_s* msg);
+  void release_flit(flit_s* flit);
+
+public:
+  static int m_msg_uid;
+  static int m_flit_uid;
+
+private:
+  pool_c<message_s>* m_msg_pool;
+  pool_c<flit_s>* m_flit_pool;
+
+  std::list<message_s*> m_msg_buff;
+  std::list<flit_s*> m_flit_buff;
+
+/* int m_msg_cnt[MAX_MSG_TYPES]; */
+  int m_channel_cnt[MAX_CHANNEL];
+  int m_channel_cap;
+
+  bool m_istx;
+  bool m_master;
+
+  Counter m_cycle;
+  cxlsim_c* m_simBase;
+};
+
 class pcie_ep_c {
 public:
   /**
@@ -91,6 +140,8 @@ public:
    */
   bool check_peer_credit(message_s* pkt);
 
+  bool has_free_rxvc(int vc_id);
+
   /**
    * Print for debugging
    */
@@ -109,16 +160,7 @@ private:
    */
   bool dll_layer_full(bool tx);
 
-  /**
-   * Init new messages/flits
-   */
-  void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
   void init_new_flit(flit_s* flit, int bits);
-
-  /**
-   * Checks if the txvc is not full 
-   */
-  bool txvc_not_full(int channel);
 
   /**
    * RX side dll layer parses the flit and inserts each message
@@ -132,14 +174,15 @@ private:
   void refresh_replay_buffer(void);
 
   /**
-   * Checks if the message is a with data type
-   */
-  bool is_wdata_msg(message_s* msg);
-
-  /**
    * For with-data msgs, add data messages and insert them to the txdll
    */
-  void add_and_push_data_msg(message_s* msg);
+/* void add_and_push_data_msg(message_s* msg); */
+
+
+  /*
+   * Release msg
+   */
+  void release_msg(message_s* msg);
 
 protected:
   /**
@@ -189,12 +232,10 @@ private:
   float m_perlane_bw; /**< PCIe per lane BW in GT/s */
   Counter m_prev_txphys_cycle; /**< finish cycle of previously sent packet */
 
-  int m_txvc_rr_idx; /** round robin id */
-  int m_vc_cnt; /**< VC number */
-  int m_txvc_cap; /**< VC buffer capacity */
-  int m_rxvc_cap; /**< VC buffer capacity */
-  std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
-  std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
+  vc_buff_c* m_txvc;
+  vc_buff_c* m_rxvc;
+
+  int m_rxvc_bw; /**< VC buffer BW */
 
   int m_flit_ndr_cnt;
   int m_flit_drs_cnt;
