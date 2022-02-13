@@ -71,8 +71,8 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
     configs, *KNOB(KNOB_RAMULATOR_CACHELINE_SIZE),
     *KNOB(KNOB_STATISTICS_OUT_DIRECTORY));
 
+  // init NDP related
   m_cache = new cache_c(m_simBase);
-
   init_ports();
 
   // init others
@@ -185,12 +185,19 @@ void cxlt3_c::push_uop_direct(cxl_req_s* req) {
 // for requests finished from ramulator, send the response back to 
 // the root complex
 void cxlt3_c::start_transaction() {
+  int cnt = 0;
   vector<cxl_req_s*> tmp_list;
 
   for (auto req : m_mxp_resp_queue) {
-    if (push_txvc(req)) {
+    bool success  = push_txvc(req);
+
+    if (success) {
       tmp_list.push_back(req);
-    } else {
+      cnt++;
+    }
+
+    if ((cnt >= *KNOB(KNOB_PCIE_MAX_TXVC_PER_CYCLE)) ||
+        success == false) {
       break;
     }
   }
@@ -279,7 +286,7 @@ void cxlt3_c::process_pending_uops() {
           cur_uop->print();
         }
       }
-    } 
+    }
 
     if ((KNOB(KNOB_NDP_SCHEDULER)->getValue() == "in_order") &&
         success == false) {
@@ -426,11 +433,6 @@ void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
     if (!req_q.size()) m_uop_reads.erase(ramu_req.addr);
 
     auto cur_uop = req->m_uop;
-    assert(cur_uop);
-
-/* cur_uop->m_done_cycle = m_cycle; */
-/* m_exec_queue.push_back(req); */
-
     free_mshr(cur_uop->m_addr);
     m_cache->insert(cur_uop->m_addr);
 
@@ -464,11 +466,6 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
     if (!req_q.size()) m_uop_writes.erase(ramu_req.addr);
 
     auto cur_uop = req->m_uop;
-    assert(cur_uop);
-
-/* cur_uop->m_done_cycle = m_cycle; */
-/* m_exec_queue.push_back(req); */
-
     free_mshr(cur_uop->m_addr);
     m_cache->insert(cur_uop->m_addr);
 

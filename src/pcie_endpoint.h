@@ -106,6 +106,59 @@ typedef enum channel_type {
   MAX_CHANNEL
 } channel_type;
 
+//////////////////////////////////////////////////////////////////////////////
+
+class vc_buff_c {
+public:
+  vc_buff_c(cxlsim_c* simBase);
+
+  void init(bool tx, bool master, pool_c<message_s>* msg_pool, 
+                                  pool_c<slot_s>* slot_pool,
+                                  pool_c<flit_s>* flit_pool);
+  bool insert_req(cxl_req_s* req);
+  cxl_req_s* pull_req();
+  std::vector<flit_s*>& pull_flit();
+  void run_a_cycle();
+
+private:
+  void insert_msg(message_s* msg, int ch_id);
+  void rm_msg(message_s* msg);
+  int get_channel(cxl_req_s* req);
+  void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
+  void generate_slots();
+
+public:
+  /**
+   * Counters used for msg/flit id
+   */
+  static int m_msg_uid;
+  static int m_flit_uid;
+
+private:
+  bool m_master;
+  bool m_tx;
+  int m_ch_cap;
+  int m_ch_cnt[MAX_CHANNEL];
+
+  pool_c<message_s>* m_msg_pool;
+  pool_c<slot_s>* m_slot_pool;
+  pool_c<flit_s>* m_flit_pool;
+
+  int m_hslot_msg_limit[MAX_MSG_TYPES];
+  int m_gslot_msg_limit[MAX_MSG_TYPES];
+  int m_flit_msg_limit[MAX_MSG_TYPES];
+
+  std::list<message_s*> m_msgs;
+  std::list<flit_s*> m_flits;
+
+  flit_s* m_cur_flit;
+
+  Counter m_cycle;
+  cxlsim_c* m_simBase;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
 class pcie_ep_c {
 public:
   /**
@@ -160,7 +213,7 @@ private:
   /**
    * Checks if m_*xdll_q is full
    */
-  bool dll_layer_full(bool tx);
+  bool txdll_layer_full();
 
   /**
    * Init new messages/flits
@@ -243,13 +296,6 @@ protected:
 
   int get_rxvc_bw();
 
-public:
-  /**
-   * Counters used for msg/flit id
-   */
-  static int m_msg_uid;
-  static int m_flit_uid;
-
 private:
   int m_id; /**< unique id of each endpoint */
   bool m_master; /**< endpoint is masterside when true */
@@ -264,8 +310,8 @@ private:
   int m_vc_cnt; /**< VC number */
   int m_txvc_cap; /**< VC buffer capacity */
   int m_rxvc_cap; /**< VC buffer capacity */
-  std::list<message_s*>* m_txvc_buff; /**< buffer of TX VC */
-  std::list<message_s*>* m_rxvc_buff; /**< buffer of RX VC */
+  std::list<message_s*> m_txvc_buff; /**< buffer of TX VC */
+  std::list<message_s*> m_rxvc_buff; /**< buffer of RX VC */
   int m_rxvc_bw; /**< VC buffer BW */
 
   int m_flit_ndr_cnt; /**< NDR req count for current flit */

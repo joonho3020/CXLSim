@@ -8,6 +8,7 @@ class cxlsim_c;
 class all_knobs_c;
 class all_stats_c;
 
+class vc_buff_c;
 class pcie_ep_c;
 class pcie_rc_c;
 class cxlt3_c;

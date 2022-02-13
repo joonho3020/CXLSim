@@ -68,14 +68,19 @@ void pcie_rc_c::run_a_cycle(bool pll_locked) {
 }
 
 void pcie_rc_c::start_transaction() {
+  int cnt = 0;
   std::vector<cxl_req_s*> tmp_list;
+  
+  for (auto req : m_pending_req) {
+    bool success  = push_txvc(req);
 
-  for (auto iter = m_pending_req.begin(); iter != m_pending_req.end(); 
-      ++iter) {
-    cxl_req_s* req = *iter;
-    if(push_txvc(req)) {
+    if (success) {
       tmp_list.push_back(req);
-    } else {
+      cnt++;
+    }
+
+    if ((cnt >= *KNOB(KNOB_PCIE_MAX_TXVC_PER_CYCLE)) ||
+        success == false) {
       break;
     }
   }

@@ -80,7 +80,8 @@ typedef enum MSG_TYPE {
   S2M_DRS,
   S2M_DATA,
   S2M_UOP,
-  INVALID
+  INVALID,
+  MAX_MSG_TYPES
 } MSG_TYPE;
 
 typedef struct message_s {
@@ -96,15 +97,13 @@ typedef struct message_s {
   MSG_TYPE m_type;
 
   bool m_data;
-  message_s* m_parent;
-  std::list<message_s*> m_childs;
+  message_s* m_parent; /**< Parent message of this data msg */
+  std::list<message_s*> m_childs; /**< Child msg of this req/resp w data msg */
   int m_arrived_child;
 
   Counter m_txvc_start;
   Counter m_txdll_start;
   Counter m_rxvc_start;
-
-  Counter m_txtrans_end;
   Counter m_rxtrans_end;  /**< rxlogic finished cycle */
 
   int m_vc_id; /**< VC id */
@@ -115,20 +114,52 @@ typedef struct message_s {
 
 //////////////////////////////////////////////////////////////////////////////
 
+typedef enum SLOT_TYPE {
+  INVAL_SLOT = 0,
+  H4, // M2S RwD / 2 S2M NDR
+  H5, // M2S Req / 2 S2M DRS
+  G0, // Data
+  G4, // M2S Req + CXL.$ / S2M DRS + 2 S2M NDR
+  G5, // M2S RwD + CXL.$ / 2 S2M NDR
+  G6, // 3 S2M DRS
+  MAX_SLOT_TYPES
+} SLOT_TYPE;
+
+typedef struct slot_s {
+  slot_s(cxlsim_c* simBase);
+  void init(void);
+  int size(void);
+  int get_wd_msg_cnt(void);
+  void print(void);
+
+  int m_id;
+  int m_msg_cnt[MAX_MSG_TYPES];
+  SLOT_TYPE m_type;
+  std::vector<message_s*> m_msgs;
+  cxlsim_c* m_simBase;
+} slot_s;
+
+//////////////////////////////////////////////////////////////////////////////
+
 typedef struct flit_s {
   flit_s(cxlsim_c* simBase);
   void init(void);
+  int size(void);
+  bool is_rollover(void);
   void print(void);
+  void push_back(slot_s* slot);
+  void push_front(slot_s* slot);
 
   int m_id;
   int m_bits;
   bool m_phys_sent;
+  int m_msg_cnt[MAX_MSG_TYPES];
 
   Counter m_txdll_end;
   Counter m_phys_end;
   Counter m_rxdll_end;
 
-  std::list<message_s*> m_msgs;
+  std::list<slot_s*> m_slots;
   cxlsim_c* m_simBase;
 } flit_s;
 
