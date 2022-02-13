@@ -105,12 +105,15 @@ void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
 // for requests finished from ramulator, send the response back to 
 // the root complex
 void cxlt3_c::start_transaction() {
+  int cnt = 0;
   vector<cxl_req_s*> tmp_list;
-
   for (auto req : m_mxp_resp_queue) {
-    if (push_txvc(req)) {
+    bool success = push_txvc(req);
+    if (success) {
       tmp_list.push_back(req);
-    } else {
+      cnt++;
+    }
+    if (cnt == *KNOB(KNOB_PCIE_TXVC_BW) || !success) {
       break;
     }
   }
