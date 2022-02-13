@@ -9,6 +9,7 @@ clock_cxlram 1.2
 # BW related
 pcie_lanes 16
 pcie_per_lane_bw 32
+pcie_rxvc_bw 4
 
 # Don't touch
 pcie_vc_cnt 4
@@ -19,7 +20,6 @@ pcie_rxvc_capacity 8
 pcie_txdll_capacity 8
 pcie_phys_capacity 8
 pcie_txreplay_capacity 8
-pcie_rxvc_bw 4
 
 # Latency params
 pcie_txtrans_latency 5
@@ -56,6 +56,7 @@ ndp_cache_assoc 2
 ndp_mshr_assoc 2
 ndp_mshr_cap 2
 ndp_scheduler in_order
+ndp_max_issue 6
 
 nop_port_cnt 4
 iadd_port_cnt 4

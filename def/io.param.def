@@ -96,3 +96,4 @@ param<NDP_CACHE_ASSOC, ndp_cache_assoc, int, 8>
 param<NDP_MSHR_ASSOC, ndp_mshr_assoc, int, 32>
 param<NDP_MSHR_CAP, ndp_mshr_cap, int, 4>
 param<NDP_SCHEDULER, ndp_scheduler, std::string, in_order>
+param<NDP_MAX_ISSUE, ndp_max_issue, int, 6>

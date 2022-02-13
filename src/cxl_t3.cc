@@ -324,6 +324,7 @@ void cxlt3_c::process_issue_queue() {
             cur_uop->m_exec_cycle = m_cycle;
             assert(m_cache->insert_mshr(req));
             tmp_list.push_back(req);
+            issue_cnt++;
 
             STAT_EVENT(CACHE_HIT_RATE_BASE);
             STAT_EVENT(CACHE_MISS_RATE);
@@ -331,11 +332,16 @@ void cxlt3_c::process_issue_queue() {
         } else if (m_cache->insert_mshr(req)) { // insert req into mshr
           cur_uop->m_exec_cycle = m_cycle;
           tmp_list.push_back(req);
+          issue_cnt++;
 
           STAT_EVENT(CACHE_HIT_RATE_BASE);
           STAT_EVENT(CACHE_MISS_RATE);
         }
       }
+    }
+
+    if (issue_cnt == *KNOB(KNOB_NDP_MAX_ISSUE)) {
+      break;
     }
   }
 
