@@ -44,7 +44,7 @@ pcie_max_flit_wait_cycle 2
 ramulator_config_file DDR4-config.cfg
 
 # NDP
-uop_direct_offload 1
+uop_direct_offload 0
 
 # NDP cache
 cacheline_offset_bits 6
@@ -78,7 +78,7 @@ fmisc_port_lat 2
 cache_port_lat 3
 
 # DEBUG
-debug_io_sys 0
+debug_io_sys 1
 debug_callback 1
 debug_uop 0
 debug_cache 0

@@ -33,6 +33,7 @@ typedef struct mshr_s mshr_s;
 typedef struct uop_s uop_s;
 typedef struct cxl_req_s cxl_req_s;
 typedef struct message_s message_s;
+typedef struct slot_s slot_s;
 typedef struct flit_s flit_s;
 
 } // namespace CXL

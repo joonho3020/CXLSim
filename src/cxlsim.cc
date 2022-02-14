@@ -77,6 +77,7 @@ cxlsim_c::cxlsim_c() {
   m_uop_pool = new pool_c<uop_s>;
   m_req_pool = new pool_c<cxl_req_s>;
   m_msg_pool = new pool_c<message_s>;
+  m_slot_pool = new pool_c<slot_s>;
   m_flit_pool = new pool_c<flit_s>;
   m_mem_trans_done_cb = NULL;
   m_uop_trans_done_cb = NULL;
@@ -95,6 +96,7 @@ cxlsim_c::~cxlsim_c() {
   delete m_uop_pool;
   delete m_req_pool;
   delete m_msg_pool;
+  delete m_slot_pool;
   delete m_flit_pool;
   delete m_domain_freq;
   delete m_domain_count;
@@ -248,9 +250,8 @@ void cxlsim_c::init_sim_objects() {
   m_rc = new pcie_rc_c(this);
   m_mxp = new cxlt3_c(this);
 
-  //    init(id, master, msg_pool,   flit_pool,   peer)
-  m_rc->init( 0, true,   m_msg_pool, m_flit_pool, m_mxp);
-  m_mxp->init(1, false,  m_msg_pool, m_flit_pool, m_rc);
+  m_rc->init( 0, true,   m_msg_pool, m_slot_pool, m_flit_pool, m_mxp);
+  m_mxp->init(1, false,  m_msg_pool, m_slot_pool, m_flit_pool, m_rc);
   m_mxp->init_cache();
 }
 

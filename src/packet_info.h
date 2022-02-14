@@ -118,12 +118,41 @@ typedef struct message_s {
 } message_s;
 
 //////////////////////////////////////////////////////////////////////////////
+typedef enum SLOT_TYPE {
+  INVAL_SLOT = 0,
+  H4, // M2S RwD / 2 S2M NDR
+  H5, // M2S Req / 2 S2M DRS
+  G0, // Data
+  G4, // M2S Req + CXL.$ / S2M DRS + 2 S2M NDR
+  G5, // M2S RwD + CXL.$ / 2 S2M NDR
+  G6, // 3 S2M DRS
+  MAX_SLOT_TYPES
+} SLOT_TYPE;
+
+typedef struct slot_s {
+  slot_s(cxlsim_c* simBase);
+  void init(void);
+  void push_back(message_s* msg);
+  void print(void);
+
+  int m_id;
+  int m_bits;
+  SLOT_TYPE m_type;
+  int m_msg_cnt[MAX_MSG_TYPES];
+  std::list<message_s*> m_msgs;
+  cxlsim_c* m_simBase;
+} slot_s;
+
+//////////////////////////////////////////////////////////////////////////////
 
 typedef struct flit_s {
   flit_s(cxlsim_c* simBase);
   void init(void);
   void print(void);
-  void insert_msg(message_s* msg);
+  int num_slots(void);
+  void push_back(slot_s* slot);
+  void push_front(slot_s* slot);
+/* void insert_msg(message_s* msg); */
 
   int m_id;
   int m_bits;
@@ -133,7 +162,8 @@ typedef struct flit_s {
   Counter m_phys_end;
   Counter m_rxdll_end;
 
-  std::list<message_s*> m_msgs;
+  int m_msg_cnt[MAX_MSG_TYPES];
+  std::list<slot_s*> m_slots;
   cxlsim_c* m_simBase;
 } flit_s;
 

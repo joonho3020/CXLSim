@@ -146,6 +146,7 @@ public:
   pool_c<uop_s>* m_uop_pool; /** uop pool for requests */
   pool_c<cxl_req_s>* m_req_pool; /**< memory pool for requests */
   pool_c<message_s>* m_msg_pool; /**< memory pool for messages */
+  pool_c<slot_s>* m_slot_pool; /**< memory pool for slots */
   pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
 
 private:
