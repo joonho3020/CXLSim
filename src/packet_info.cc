@@ -103,11 +103,42 @@ bool message_s::rxvc_rdy(Counter cycle) {
 void message_s::print(void) {
   Addr addr = m_req ? m_req->m_addr : 0x00;
   std::string msg_type = m_data ? "DATA" 
-                                : (m_vc_id == WD_CHANNEL) ? "WDATA"
-                                                          : "WODATA";
+                                : (m_vc_id == WD_CHANNEL) ? "WD"
+                                : (m_vc_id == UOP_CHANNEL) ? "UOP"
+                                : "WOD";
 
-  std::cout << " | <MSG> addr: " << std::hex << addr
-                << " channel: " << msg_type;
+  std::cout << "MSG:" << std::hex << addr
+                << ":" << msg_type << " ";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+slot_s::slot_s(cxlsim_c* simBase) {
+  m_simBase = simBase;
+}
+
+void slot_s::init(void) {
+  m_id = 0;
+  m_bits = 0;
+  m_type = INVAL_SLOT;
+  for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
+    m_msg_cnt[ii] = 0;
+  }
+  m_msgs.clear();
+}
+
+void slot_s::push_back(message_s* msg) {
+  m_bits += msg->m_bits;
+  m_msg_cnt[msg->m_type]++;
+  m_msgs.push_back(msg);
+}
+
+void slot_s::print(void) {
+  std::cout << "{";
+  for (auto msg : m_msgs) {
+    msg->print();
+  }
+  std::cout << "} ";
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -126,20 +157,45 @@ void flit_s::init(void) {
   m_phys_end = 0;
   m_rxdll_end = 0;
 
-  m_msgs.clear();
+  for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
+    m_msg_cnt[ii] = 0;
+  }
+
+  m_slots.clear();
 }
 
-void flit_s::insert_msg(message_s* msg) {
-  m_bits += msg->m_bits;
-  m_msgs.push_back(msg);
+int flit_s::num_slots() {
+  return (int)m_slots.size();
 }
+
+void flit_s::push_back(slot_s* slot) {
+  m_bits += slot->m_bits;
+  for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
+    m_msg_cnt[ii] += slot->m_msg_cnt[ii];
+  }
+  m_slots.push_back(slot);
+}
+
+void flit_s::push_front(slot_s* slot) {
+  m_bits += slot->m_bits;
+  for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
+    m_msg_cnt[ii] += slot->m_msg_cnt[ii];
+  }
+  m_slots.push_front(slot);
+}
+
+/* void flit_s::insert_msg(message_s* msg) { */
+/* m_bits += msg->m_bits; */
+/* m_slots.push_back(msg); */
+/* } */
 
 void flit_s::print(void) {
-  std::cout << "====== <FLIT> " << std::endl;
-  for (auto msg : m_msgs) {
-    msg->print();
+  std::cout << "FLT<";
+  for (auto slot : m_slots) {
+    slot->print();
   }
-  std::cout << std::endl;
+  std::cout << m_bits;
+  std::cout << " >" << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////

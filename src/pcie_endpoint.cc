@@ -48,6 +48,7 @@ POSSIBILITY OF SUCH DAMAGE.
 namespace cxlsim {
 
 int vc_buff_c::m_msg_uid;
+int vc_buff_c::m_slot_uid;
 int vc_buff_c::m_flit_uid;
 
 vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
@@ -57,11 +58,13 @@ vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
 
 void vc_buff_c::init(bool is_tx, bool is_master, 
                         pool_c<message_s>* msg_pool, 
+                        pool_c<slot_s>* slot_pool, 
                         pool_c<flit_s>* flit_pool,
                         int capacity) {
   m_istx = is_tx;
   m_master = is_master;
   m_msg_pool = msg_pool;
+  m_slot_pool = slot_pool;
   m_flit_pool = flit_pool;
   m_channel_cap = capacity;
 }
@@ -92,26 +95,50 @@ void vc_buff_c::insert(cxl_req_s* req) {
 
 // FIXME
 void vc_buff_c::generate_flits() {
-  flit_s* new_flit = NULL;
   std::vector<message_s*> rdy;
   for (auto msg : m_msg_buff) {
     if ((m_istx && msg->txvc_rdy(m_cycle)) ||
         (!m_istx && msg->rxvc_rdy(m_cycle))) {
-      new_flit = m_flit_pool->acquire_entry(m_simBase);
-      new_flit->m_id = ++m_flit_uid;
-      new_flit->insert_msg(msg);
+      slot_s* new_slot = m_slot_pool->acquire_entry(m_simBase);
+      new_slot->init();
+      new_slot->m_id = ++m_slot_uid;
+      new_slot->push_back(msg);
 
       rdy.push_back(msg);
-      m_flit_buff.push_back(new_flit);
+      m_slot_buff.push_back(new_slot);
     }
   }
 
   for (auto msg : rdy) {
     remove_msg(msg);
   }
+
+  flit_s* new_flit = NULL;
+  std::vector<slot_s*> tmp;
+  for (auto slot : m_slot_buff) {
+    if (new_flit == NULL) {
+      new_flit = m_flit_pool->acquire_entry(m_simBase);
+      new_flit->init();
+      new_flit->m_id = ++m_flit_uid;
+    }
+    new_flit->push_back(slot);
+    tmp.push_back(slot);
+
+    if (new_flit->num_slots() == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+      break;
+    }
+  }
+
+  if (new_flit != NULL) {
+    m_flit_buff.push_back(new_flit);
+  }
+
+  for (auto slot : tmp) {
+    remove_slot(slot);
+  }
 }
 
-flit_s* vc_buff_c::peak_flit() {
+flit_s* vc_buff_c::peek_flit() {
   if (m_flit_buff.empty()) {
     return NULL;
   }
@@ -196,13 +223,20 @@ void vc_buff_c::remove_msg(message_s* msg) {
   m_msg_buff.remove(msg);
 }
 
+void vc_buff_c::remove_slot(slot_s* slot) {
+  m_slot_buff.remove(slot);
+}
+
 void vc_buff_c::run_a_cycle() {
   m_cycle++;
 }
 
 void vc_buff_c::receive_flit(flit_s* flit) {
-  for (auto msg : flit->m_msgs) {
-    insert_channel(msg->m_vc_id, msg);
+  for (auto slot : flit->m_slots) {
+    for (auto msg : slot->m_msgs) {
+      insert_channel(msg->m_vc_id, msg);
+    }
+    release_slot(slot);
   }
   release_flit(flit);
 }
@@ -212,9 +246,19 @@ void vc_buff_c::release_flit(flit_s* flit) {
   m_flit_pool->release_entry(flit);
 }
 
+void vc_buff_c::release_slot(slot_s* slot) {
+  slot->init();
+  m_slot_pool->release_entry(slot);
+}
+
 void vc_buff_c::print() {
   for (auto msg : m_msg_buff) {
     msg->print();
+  }
+  std::cout << std::endl;
+  for (auto slot : m_slot_buff) {
+    slot->print();
+    std::cout << std::endl;
   }
   for (auto flit : m_flit_buff) {
     flit->print();
@@ -222,9 +266,6 @@ void vc_buff_c::print() {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-int pcie_ep_c::m_msg_uid;
-int pcie_ep_c::m_flit_uid;
 
 pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   // simulation related
@@ -243,20 +284,20 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_rxvc = new vc_buff_c(simBase);
   m_rxvc_bw = *KNOB(KNOB_PCIE_RXVC_BW);
 
-  m_flit_ndr_cnt = 0;
-  m_flit_drs_cnt = 0;
-  m_slot_ndr_cnt = 0;
-  m_slot_drs_cnt = 0;
+/* m_flit_ndr_cnt = 0; */
+/* m_flit_drs_cnt = 0; */
+/* m_slot_ndr_cnt = 0; */
+/* m_slot_drs_cnt = 0; */
 
-  m_slot_cnt = 0;
+/* m_slot_cnt = 0; */
 
-  m_max_flit_wait = *KNOB(KNOB_PCIE_MAX_FLIT_WAIT_CYCLE);
-  m_flit_wait_cycle = 0;
+/* m_max_flit_wait = *KNOB(KNOB_PCIE_MAX_FLIT_WAIT_CYCLE); */
+/* m_flit_wait_cycle = 0; */
 
-  m_cur_flit = NULL;
+/* m_cur_flit = NULL; */
 
   // initialize dll
-  m_txdll_cap = *KNOB(KNOB_PCIE_TXDLL_CAPACITY);
+/* m_txdll_cap = *KNOB(KNOB_PCIE_TXDLL_CAPACITY); */
   m_txreplay_cap = *KNOB(KNOB_PCIE_TXREPLAY_CAPACITY);
 
   // initialize physical layers 
@@ -286,17 +327,21 @@ pcie_ep_c::~pcie_ep_c() {
 }
 
 void pcie_ep_c::init(int id, bool master, pool_c<message_s>* msg_pool, 
+                     pool_c<slot_s>* slot_pool,
                      pool_c<flit_s>* flit_pool, pcie_ep_c* peer) {
   m_id = id;
   m_master = master;
   m_msg_pool = msg_pool;
+  m_slot_pool = slot_pool;
   m_flit_pool = flit_pool;
   m_peer_ep = peer;
 
   int tx_cap = *KNOB(KNOB_PCIE_TXVC_CAPACITY);
   int rx_cap = *KNOB(KNOB_PCIE_RXVC_CAPACITY);
-  m_txvc->init(/* tx? */true,  m_master, m_msg_pool, m_flit_pool, tx_cap);
-  m_rxvc->init(/* tx? */false, m_master, m_msg_pool, m_flit_pool, tx_cap);
+  m_txvc->init(/* tx? */true,  m_master, 
+                m_msg_pool, m_slot_pool, m_flit_pool, tx_cap);
+  m_rxvc->init(/* tx? */false, m_master, 
+                m_msg_pool, m_slot_pool, m_flit_pool, tx_cap);
 }
 
 void pcie_ep_c::run_a_cycle(bool pll_locked) {
@@ -324,11 +369,6 @@ void pcie_ep_c::insert_phys(flit_s* flit) {
   m_rxphys_q.push_back(flit);
 }
 
-bool pcie_ep_c::check_peer_credit(message_s* pkt) {
-  int vc_id = pkt->m_vc_id;
-  return m_peer_ep->has_free_rxvc(vc_id);
-}
-
 bool pcie_ep_c::has_free_rxvc(int vc_id) {
   return (m_rxvc->full(vc_id) == false);
 }
@@ -342,19 +382,19 @@ Counter pcie_ep_c::get_phys_latency(flit_s* flit) {
   return static_cast<Counter>(flit->m_bits / (lanes * m_perlane_bw) * freq);
 }
 
-bool pcie_ep_c::dll_layer_full(bool tx) {
-  if (tx) {
-    return (m_txdll_cap <= (int)m_txdll_q.size());
-  } else {
-    assert(0);
-  }
-}
+/* bool pcie_ep_c::dll_layer_full(bool tx) { */
+/* if (tx) { */
+/* return (m_txdll_cap <= (int)m_txdll_q.size()); */
+/* } else { */
+/* assert(0); */
+/* } */
+/* } */
 
-void pcie_ep_c::init_new_flit(flit_s* flit, int bits) {
-  flit->init();
-  flit->m_id = ++m_flit_uid;
-  flit->m_bits = bits;
-}
+/* void pcie_ep_c::init_new_flit(flit_s* flit, int bits) { */
+/* flit->init(); */
+/* flit->m_id = ++m_flit_uid; */
+/* flit->m_bits = bits; */
+/* } */
 
 // FIXME
 void pcie_ep_c::parse_and_insert_flit(flit_s* flit) {
@@ -490,6 +530,22 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
   return NULL;
 }
 
+bool pcie_ep_c::check_peer_credit(message_s* pkt) {
+  int vc_id = pkt->m_vc_id;
+  return m_peer_ep->has_free_rxvc(vc_id);
+}
+
+bool pcie_ep_c::check_peer_credit(flit_s* flit) {
+  bool success = true;
+  for (auto slot : flit->m_slots) {
+    for (auto msg : slot->m_msgs) {
+      success = check_peer_credit(msg);
+    }
+  }
+  return success;
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 void pcie_ep_c::process_txtrans() {
@@ -499,14 +555,11 @@ void pcie_ep_c::process_txtrans() {
 
 void pcie_ep_c::process_txdll() {
   while (m_txreplay_cap > (int)m_txreplay_buff.size()) {
-    flit_s* flit = m_txvc->peak_flit();
+    flit_s* flit = m_txvc->peek_flit();
 
     if (flit != NULL) {
-      bool success = true;
-      for (auto msg : flit->m_msgs) {
-        success = check_peer_credit(msg);
-      }
-      if (success) {
+      bool fctrl_success = check_peer_credit(flit);
+      if (fctrl_success) {
         flit->m_txdll_end = m_cycle + *KNOB(KNOB_PCIE_TXDLL_LATENCY);
         m_txreplay_buff.push_back(flit);
         m_txvc->pop_flit();
@@ -541,22 +594,22 @@ void pcie_ep_c::process_txphys() {
         m_peer_ep->insert_phys(cur_flit);
 
         // update dll stats
-        for (auto msg : cur_flit->m_msgs) {
-          STAT_EVENT(PCIE_TXDLL_BASE);
-          STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY, m_cycle - msg->m_txdll_start);
-        }
+/* for (auto msg : cur_flit->m_msgs) { */
+/* STAT_EVENT(PCIE_TXDLL_BASE); */
+/* STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY, m_cycle - msg->m_txdll_start); */
+/* } */
 
         // update goodput related stats
-        int good_bits = 0;
-        for (auto msg : cur_flit->m_msgs) {
-          good_bits += msg->m_bits;
-        }
-        STAT_EVENT_N(PCIE_GOODPUT_BASE, *KNOB(KNOB_PCIE_FLIT_BITS));
-        STAT_EVENT_N(AVG_PCIE_GOODPUT, good_bits);
+/* int good_bits = 0; */
+/* for (auto msg : cur_flit->m_msgs) { */
+/* good_bits += msg->m_bits; */
+/* } */
+/* STAT_EVENT_N(PCIE_GOODPUT_BASE, *KNOB(KNOB_PCIE_FLIT_BITS)); */
+/* STAT_EVENT_N(AVG_PCIE_GOODPUT, good_bits); */
 
-        // update phys latency related stats
-        STAT_EVENT(PCIE_FLIT_BASE);
-        STAT_EVENT_N(AVG_PCIE_PHYS_LATENCY, phys_finished - cur_flit->m_txdll_end);
+/* // update phys latency related stats */
+/* STAT_EVENT(PCIE_FLIT_BASE); */
+/* STAT_EVENT_N(AVG_PCIE_PHYS_LATENCY, phys_finished - cur_flit->m_txdll_end); */
 
         break;
       }
@@ -589,6 +642,7 @@ void pcie_ep_c::process_rxtrans() {
 void pcie_ep_c::print_ep_info() {
   std::cout << "======== TXVC" << std::endl;
   m_txvc->print();
+  std::cout << std::endl;
 
   std::cout << "======= Replay buff" << std::endl;
   for (auto flit : m_txreplay_buff) {
@@ -602,6 +656,7 @@ void pcie_ep_c::print_ep_info() {
 
   std::cout << "======== RXVC" << std::endl;
   m_rxvc->print();
+  std::cout << std::endl;
 }
 
 } // namespace CXL

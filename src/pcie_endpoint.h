@@ -59,6 +59,7 @@ public:
   vc_buff_c(cxlsim_c* simBase);
   void init(bool is_tx, bool is_master, 
             pool_c<message_s>* msg_pool, 
+            pool_c<slot_s>* slot_pool,
             pool_c<flit_s>* flit_pool,
             int capacity);
   bool full(int vc_id); /**< true if vc_id is full, otherwise false */
@@ -67,7 +68,7 @@ public:
   int get_channel(cxl_req_s* req);
   void insert(cxl_req_s* req); // generate msg inside
   void generate_flits();
-  flit_s* peak_flit();
+  flit_s* peek_flit();
   void pop_flit();
   message_s* pull_msg(int vc_id);
   void receive_flit(flit_s* flit);
@@ -78,17 +79,22 @@ private:
   void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
   void insert_channel(int vc_id, message_s* msg);
   void remove_msg(message_s* msg);
+  void remove_slot(slot_s* slot);
   void release_flit(flit_s* flit);
+  void release_slot(slot_s* slot);
 
 public:
   static int m_msg_uid;
+  static int m_slot_uid;
   static int m_flit_uid;
 
 private:
   pool_c<message_s>* m_msg_pool;
+  pool_c<slot_s>* m_slot_pool;
   pool_c<flit_s>* m_flit_pool;
 
   std::list<message_s*> m_msg_buff;
+  std::list<slot_s*> m_slot_buff;
   std::list<flit_s*> m_flit_buff;
 
 /* int m_msg_cnt[MAX_MSG_TYPES]; */
@@ -118,6 +124,7 @@ public:
    * Initialize PCIe endpoint
    */
   void init(int id, bool master, pool_c<message_s>* msg_pool, 
+            pool_c<slot_s>* slot_pool,
             pool_c<flit_s>* flit_pool, pcie_ep_c* peer);
 
   /**
@@ -134,11 +141,6 @@ public:
    * Receive packet from transmit side & put in rx physical q
    */
   void insert_phys(flit_s* flit);
-
-  /**
-   * Checks if the peer has enough rxvc entries left for this message type
-   */
-  bool check_peer_credit(message_s* pkt);
 
   bool has_free_rxvc(int vc_id);
 
@@ -158,7 +160,7 @@ private:
   /**
    * Checks if m_*xdll_q is full
    */
-  bool dll_layer_full(bool tx);
+/* bool dll_layer_full(bool tx); */
 
   void init_new_flit(flit_s* flit, int bits);
 
@@ -184,6 +186,18 @@ private:
    */
   void release_msg(message_s* msg);
 
+<<<<<<< HEAD
+=======
+  /**
+   * Checks if the peer has enough rxvc entries left for this message type
+   * (for flow control)
+   */
+  bool check_peer_credit(message_s* msg);
+  bool check_peer_credit(flit_s* flit);
+
+
+
+>>>>>>> b277b20 (add slots to cxlsim)
 protected:
   /**
    * Start PCIe transaction by inserting requests
@@ -215,17 +229,13 @@ protected:
   void process_rxdll();
   void process_rxtrans();
 
-public:
-  /**
-   * Counters used for msg/flit id
-   */
-  static int m_msg_uid;
-  static int m_flit_uid;
+  int get_rxvc_bw();
 
 private:
   int m_id; /**< unique id of each endpoint */
   bool m_master; /**< endpoint is masterside when true */
   pool_c<message_s>* m_msg_pool; /**< message pool */
+  pool_c<slot_s>* m_slot_pool;
   pool_c<flit_s>* m_flit_pool; /**< flit pool */
 
   int m_lanes; /**< PCIe lanes connected to endpoint */
@@ -237,20 +247,8 @@ private:
 
   int m_rxvc_bw; /**< VC buffer BW */
 
-  int m_flit_ndr_cnt;
-  int m_flit_drs_cnt;
-  int m_slot_ndr_cnt;
-  int m_slot_drs_cnt;
-
-  int m_slot_cnt;
-
-  int m_max_flit_wait;
-  int m_flit_wait_cycle;
-
-  flit_s* m_cur_flit;
-
-  int m_txdll_cap; /**< dll layer queue capacity */
-  std::list<message_s*> m_txdll_q; /**< dll layer queue */
+/* int m_txdll_cap; /**< dll layer queue capacity *1/ */
+/* std::list<message_s*> m_txdll_q; /**< dll layer queue *1/ */
   int m_txreplay_cap; /**< replay buffer capacity */
   std::list<flit_s*> m_txreplay_buff; /**< replay buffer */
 
