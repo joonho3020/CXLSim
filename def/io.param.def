@@ -39,10 +39,8 @@ param<PCIE_RXVC_CAPACITY, pcie_rxvc_capacity, int, 8>
 param<PCIE_RXVC_BW, pcie_rxvc_bw, int, 4>
 param<PCIE_TXVC_BW, pcie_txvc_bw, int, 4>
 
-param<PCIE_TXDLL_CAPACITY, pcie_txdll_capacity, int, 8>
-
-param<PCIE_PHYS_CAPACITY, pcie_phys_capacity, int, 8>
 param<PCIE_TXREPLAY_CAPACITY, pcie_txreplay_capacity, int, 8>
+param<PCIE_REPLAY_BW, pcie_replay_bw, int, 2>
 
 /* Latency related */
 param<PCIE_TXTRANS_LATENCY, pcie_txtrans_latency, uint64_t, 5>
@@ -52,10 +50,8 @@ param<PCIE_RXDLL_LATENCY, pcie_rxdll_latency, uint64_t, 5>
 param<PCIE_ARBMUX_LATENCY, pcie_arbmux_latency, uint64_t, 2>
 
 /* Flit related */
-param<PCIE_MAX_MSG_PER_FLIT, pcie_max_msg_per_flit, int, 4>
 param<PCIE_FLIT_BITS, pcie_flit_bits, int, 544>
 param<PCIE_SLOTS_PER_FLIT, pcie_slots_per_flit, int, 4>
-
 param<PCIE_MAX_FLIT_WAIT_CYCLE, pcie_max_flit_wait_cycle, int, 3>
 
 /* Message related */

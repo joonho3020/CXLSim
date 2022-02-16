@@ -195,6 +195,7 @@ typedef struct flit_s {
 
   Counter m_txreplay_insert_start;
   Counter m_txreplay_insert_done;
+  Counter m_phys_start;
   Counter m_phys_done;
   Counter m_rxdll_done;
 

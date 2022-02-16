@@ -213,6 +213,7 @@ void flit_s::init(void) {
 
   m_txreplay_insert_start = 0;
   m_txreplay_insert_done = 0;
+  m_phys_start = 0;
   m_phys_done = 0;
   m_rxdll_done = 0;
 
@@ -258,7 +259,7 @@ void flit_s::print(void) {
   for (auto slot : m_slots) {
     slot->print();
   }
-  std::cout << std::dec << m_bits;
+  std::cout << std::dec << m_bits << " " << m_phys_done << " " << m_rxdll_done << " ";
   std::cout << " >" << std::endl;
 }
 

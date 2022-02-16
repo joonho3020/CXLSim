@@ -231,6 +231,8 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
     if (msg == NULL) {
       continue;
     }
+    STAT_EVENT(PCIE_RXTRANS_BASE);
+    STAT_EVENT_N(AVG_PCIE_RXTRANS_LATENCY, (m_cycle - msg->m_rxvc_insert_start));
 
 /* if (msg->is_wdata_msg()) */
 /* assert(msg->m_arrived_child == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)); */
@@ -265,6 +267,7 @@ void pcie_ep_c::process_txtrans() {
 }
 
 void pcie_ep_c::process_txdll() {
+  int cnt = 0;
   while (m_txreplay_cap > (int)m_txreplay_buff.size()) {
     flit_s* flit = m_txvc->peek_flit();
 
@@ -273,10 +276,25 @@ void pcie_ep_c::process_txdll() {
       if (fctrl_success) {
         flit->m_txreplay_insert_start = m_cycle;
         flit->m_txreplay_insert_done = m_cycle + *KNOB(KNOB_PCIE_TXDLL_LATENCY);
+
         m_txreplay_buff.push_back(flit);
         m_txvc->pop_flit();
+        cnt++;
+
+        // update stats
+        for (auto slot : flit->m_slots) {
+          for (auto msg : slot->m_msgs) {
+            STAT_EVENT(PCIE_TXTRANS_BASE);
+            STAT_EVENT_N(AVG_PCIE_TXTRANS_LATENCY, 
+                        (m_cycle - msg->m_txvc_insert_start));
+          }
+        }
       }
     } else {
+      break;
+    }
+
+    if (cnt == *KNOB(KNOB_PCIE_REPLAY_BW)) {
       break;
     }
   }
@@ -298,6 +316,7 @@ void pcie_ep_c::process_txphys() {
         Counter phys_finished = start_cyc + lat;
 
         m_prev_txphys_cycle = phys_finished;
+        cur_flit->m_phys_start = start_cyc;
         cur_flit->m_phys_done = phys_finished;
         cur_flit->m_rxdll_done = phys_finished + *KNOB(KNOB_PCIE_RXDLL_LATENCY);
         cur_flit->m_phys_sent = true;
@@ -306,22 +325,13 @@ void pcie_ep_c::process_txphys() {
         m_peer_ep->insert_phys(cur_flit);
 
         // update dll stats
-/* for (auto msg : cur_flit->m_msgs) { */
-/* STAT_EVENT(PCIE_TXDLL_BASE); */
-/* STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY, m_cycle - msg->m_txdll_start); */
-/* } */
+        STAT_EVENT(PCIE_TXDLL_BASE);
+        STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY, 
+                    (m_cycle - cur_flit->m_txreplay_insert_start));
 
         // update goodput related stats
-/* int good_bits = 0; */
-/* for (auto msg : cur_flit->m_msgs) { */
-/* good_bits += msg->m_bits; */
-/* } */
-/* STAT_EVENT_N(PCIE_GOODPUT_BASE, *KNOB(KNOB_PCIE_FLIT_BITS)); */
-/* STAT_EVENT_N(AVG_PCIE_GOODPUT, good_bits); */
-
-/* // update phys latency related stats */
-/* STAT_EVENT(PCIE_FLIT_BASE); */
-/* STAT_EVENT_N(AVG_PCIE_PHYS_LATENCY, phys_finished - cur_flit->m_txreplay_insert_done); */
+        STAT_EVENT_N(PCIE_GOODPUT_BASE, *KNOB(KNOB_PCIE_FLIT_BITS));
+        STAT_EVENT_N(AVG_PCIE_GOODPUT, cur_flit->m_bits);
 
         break;
       }
@@ -336,6 +346,12 @@ void pcie_ep_c::process_rxphys() {
     // finished physical layer & rx dll layer
     if (flit->m_rxdll_done <= m_cycle) {
       m_rxphys_q.pop_front();
+
+      STAT_EVENT(PCIE_FLIT_BASE);
+      STAT_EVENT_N(AVG_PCIE_PHYS_LATENCY, (flit->m_phys_done - flit->m_phys_start));
+      STAT_EVENT(PCIE_RXDLL_BASE);
+      STAT_EVENT_N(AVG_PCIE_RXDLL_LATENCY, (m_cycle - flit->m_phys_done));
+
       m_rxvc->receive_flit(flit);
     } else {
       break;

@@ -26,7 +26,6 @@ pcie_rxdll_latency 5
 pcie_arbmux_latency 2
 
 # Don't touch
-pcie_max_msg_per_flit 4
 pcie_flit_bits 528
 pcie_data_slots_per_flit 4
 
@@ -38,7 +37,7 @@ pcie_drs_msg_bits 40
 pcie_uop_msg_bits 64
 
 # Flit wait cycles
-pcie_max_flit_wait_cycle 5
+pcie_max_flit_wait_cycle 2
 
 # ramulator
 ramulator_config_file DDR4-config.cfg
