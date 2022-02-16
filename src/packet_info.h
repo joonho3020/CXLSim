@@ -125,6 +125,9 @@ typedef struct slot_s {
   void init(void);
   void push_back(message_s* msg);
   void print(void);
+  bool empty(void);
+  bool is_data(void);
+  bool multi_msg(void);
 
   int m_id;
   int m_bits;

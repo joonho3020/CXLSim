@@ -67,6 +67,21 @@ void vc_buff_c::init(bool is_tx, bool is_master,
   m_slot_pool = slot_pool;
   m_flit_pool = flit_pool;
   m_channel_cap = capacity;
+
+  m_hslot_msg_limit[M2S_REQ] = 1;
+  m_hslot_msg_limit[M2S_RWD] = 1;
+  m_hslot_msg_limit[S2M_DRS] = 2;
+  m_hslot_msg_limit[S2M_NDR] = 2;
+
+  m_hslot_msg_limit[M2S_REQ] = 1;
+  m_hslot_msg_limit[M2S_RWD] = 1;
+  m_hslot_msg_limit[S2M_DRS] = 1;
+  m_hslot_msg_limit[S2M_NDR] = 2;
+
+  m_flit_msg_limit[M2S_REQ] = 2;
+  m_flit_msg_limit[M2S_RWD] = 1;
+  m_flit_msg_limit[S2M_DRS] = 3;
+  m_flit_msg_limit[S2M_NDR] = 2;
 }
 
 bool vc_buff_c::full(int vc_id) {
@@ -95,47 +110,118 @@ void vc_buff_c::insert(cxl_req_s* req) {
 
 // FIXME
 void vc_buff_c::generate_flits() {
-  std::vector<message_s*> rdy;
+  std::list<message_s*> rdy;
   for (auto msg : m_msg_buff) {
     if ((m_istx && msg->txvc_rdy(m_cycle)) ||
         (!m_istx && msg->rxvc_rdy(m_cycle))) {
-      slot_s* new_slot = m_slot_pool->acquire_entry(m_simBase);
-      new_slot->init();
-      new_slot->m_id = ++m_slot_uid;
-      new_slot->push_back(msg);
-
       rdy.push_back(msg);
-      m_slot_buff.push_back(new_slot);
     }
   }
 
-  for (auto msg : rdy) {
-    remove_msg(msg);
+  if ((int)rdy.size() == 0) {
+    return;
   }
 
   flit_s* new_flit = NULL;
-  std::vector<slot_s*> tmp;
-  for (auto slot : m_slot_buff) {
-    if (new_flit == NULL) {
-      new_flit = m_flit_pool->acquire_entry(m_simBase);
-      new_flit->init();
-      new_flit->m_id = ++m_flit_uid;
+  slot_s* hslot = generate_hslot(rdy);
+  if (hslot != NULL) {
+    new_flit = acquire_flit();
+    new_flit->push_back(hslot);
+
+    for (int ii = 0; ii < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT) - 1; ii++) {
+      if ((int)rdy.size() == 0) {
+        break;
+      }
+      slot_s* gslot = generate_gslot(rdy, new_flit);
+      if (gslot != NULL) {
+        new_flit->push_back(gslot);
+      }
     }
-    new_flit->push_back(slot);
-    tmp.push_back(slot);
 
-    if (new_flit->num_slots() == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
-      break;
+    add_data_slots_and_insert(new_flit);
+  }
+}
+
+void vc_buff_c::add_data_slots_and_insert(flit_s* flit) {
+  m_flit_buff.push_back(flit);
+}
+
+slot_s* vc_buff_c::generate_hslot(std::list<message_s*>& msgs) {
+  slot_s* new_slot = NULL;
+  std::vector<message_s*> tmp;
+  for (auto msg : msgs) {
+    if (check_valid_header(new_slot, msg)) {
+      if (new_slot == NULL) {
+        new_slot = acquire_slot();
+      }
+      new_slot->push_back(msg);
+      tmp.push_back(msg);
     }
   }
-
-  if (new_flit != NULL) {
-    m_flit_buff.push_back(new_flit);
+  for (auto msg : tmp) {
+    msgs.remove(msg);
+    remove_msg(msg);
   }
+  return new_slot;
+}
 
-  for (auto slot : tmp) {
-    remove_slot(slot);
+slot_s* vc_buff_c::generate_gslot(std::list<message_s*>& msgs, flit_s* flit) {
+  slot_s* new_slot = NULL;
+  std::vector<message_s*> tmp;
+  for (auto msg : msgs) {
+    if (check_valid_general(new_slot, msg, flit)) {
+      if (new_slot == NULL) {
+        new_slot = acquire_slot();
+      }
+      new_slot->push_back(msg);
+      tmp.push_back(msg);
+    }
   }
+  for (auto msg : tmp) {
+    msgs.remove(msg);
+    remove_msg(msg);
+  }
+  return new_slot;
+}
+
+bool vc_buff_c::check_valid_header(slot_s* slot, message_s* msg) {
+  if (slot == NULL || slot->empty()) {
+    return true;
+  } else {
+    if (slot->m_msg_cnt[msg->m_type] != 0) { // check limit
+      return (slot->m_msg_cnt[msg->m_type] < m_hslot_msg_limit[msg->m_type]);
+    } else { // headers only allow same type of message
+      return false;
+    }
+  }
+}
+
+bool vc_buff_c::check_valid_general(slot_s* slot, message_s* msg, flit_s* flit) {
+  bool flit_chk = (flit->m_msg_cnt[msg->m_type] < m_flit_msg_limit[msg->m_type]);
+
+  bool slot_chk = false;
+  if (slot == NULL || slot->empty()) {
+    slot_chk = true;
+  } else {
+    if (slot->multi_msg() || slot->m_msg_cnt[msg->m_type] == 0) {
+      if (msg->m_type == S2M_NDR) {
+        if (slot->m_msg_cnt[S2M_DRS] < 2 && slot->m_msg_cnt[S2M_NDR] < 2)
+          slot_chk = true;
+        else
+          slot_chk = false;
+      } else if (msg->m_type == S2M_DRS) {
+        if (slot->m_msg_cnt[S2M_DRS] < 1 && slot->m_msg_cnt[S2M_NDR] < 3)
+          slot_chk = true;
+        else
+          slot_chk = false;
+      } else {
+        slot_chk = false;
+      }
+    } else {
+     slot_chk = (slot->m_msg_cnt[msg->m_type] < m_gslot_msg_limit[msg->m_type]);
+    }
+  }
+  return slot_chk && flit_chk;
 }
 
 flit_s* vc_buff_c::peek_flit() {
@@ -249,6 +335,20 @@ void vc_buff_c::release_flit(flit_s* flit) {
 void vc_buff_c::release_slot(slot_s* slot) {
   slot->init();
   m_slot_pool->release_entry(slot);
+}
+
+slot_s* vc_buff_c::acquire_slot() {
+  slot_s* new_slot = m_slot_pool->acquire_entry(m_simBase);
+  new_slot->init();
+  new_slot->m_id = ++m_slot_uid;
+  return new_slot;
+}
+
+flit_s* vc_buff_c::acquire_flit() {
+  flit_s* new_flit = m_flit_pool->acquire_entry(m_simBase);
+  new_flit->init();
+  new_flit->m_id = ++m_flit_uid;
+  return new_flit;
 }
 
 void vc_buff_c::print() {

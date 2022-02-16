@@ -94,10 +94,10 @@ bool message_s::is_wdata_msg(void) {
 }
 
 bool message_s::txvc_rdy(Counter cycle) {
-  return m_txvc_start >= cycle;
+  return m_txvc_start <= cycle;
 }
 bool message_s::rxvc_rdy(Counter cycle) {
-  return m_rxvc_start >= cycle;
+  return m_rxvc_start <= cycle;
 }
 
 void message_s::print(void) {
@@ -131,6 +131,23 @@ void slot_s::push_back(message_s* msg) {
   m_bits += msg->m_bits;
   m_msg_cnt[msg->m_type]++;
   m_msgs.push_back(msg);
+}
+
+bool slot_s::is_data(void) {
+  return m_type == G0;
+}
+
+bool slot_s::empty(void) {
+  return m_msgs.empty();
+}
+
+bool slot_s::multi_msg(void) {
+  int cnt = 0;
+  for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
+    if (m_msg_cnt[ii]) cnt++;
+  }
+  if (cnt > 1) return true;
+  else return false;
 }
 
 void slot_s::print(void) {

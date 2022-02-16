@@ -82,6 +82,16 @@ private:
   void remove_slot(slot_s* slot);
   void release_flit(flit_s* flit);
   void release_slot(slot_s* slot);
+  slot_s* acquire_slot();
+  flit_s* acquire_flit();
+
+  // TODO
+  slot_s* generate_hslot(std::list<message_s*>& msgs); // should call remove_msg
+  slot_s* generate_gslot(std::list<message_s*>& msgs, flit_s* flit);
+
+  bool check_valid_header(slot_s* slot, message_s* msg);
+  bool check_valid_general(slot_s* slot, message_s* msg, flit_s* flit);
+  void add_data_slots_and_insert(flit_s* flit);
 
 public:
   static int m_msg_uid;
@@ -100,6 +110,10 @@ private:
 /* int m_msg_cnt[MAX_MSG_TYPES]; */
   int m_channel_cnt[MAX_CHANNEL];
   int m_channel_cap;
+
+  int m_hslot_msg_limit[MAX_MSG_TYPES];
+  int m_gslot_msg_limit[MAX_MSG_TYPES];
+  int m_flit_msg_limit[MAX_MSG_TYPES];
 
   bool m_istx;
   bool m_master;
