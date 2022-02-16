@@ -36,8 +36,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <string>
+#include <cassert>
 
 #include "pcie_endpoint.h"
+#include "all_knobs.h"
 #include "packet_info.h"
 #include "global_types.h"
 
@@ -100,15 +102,31 @@ bool message_s::rxvc_rdy(Counter cycle) {
   return m_rxvc_start <= cycle;
 }
 
-void message_s::print(void) {
-  Addr addr = m_req ? m_req->m_addr : 0x00;
-  std::string msg_type = m_data ? "DATA" 
-                                : (m_vc_id == WD_CHANNEL) ? "WD"
-                                : (m_vc_id == UOP_CHANNEL) ? "UOP"
-                                : "WOD";
+void message_s::init_data_msg(message_s* parent) {
+  assert(parent->m_type == M2S_RWD || parent->m_type == S2M_DRS);
 
-  std::cout << "MSG:" << std::hex << addr
-                << ":" << msg_type << " ";
+  m_bits = *KNOB(KNOB_PCIE_DATA_MSG_BITS);
+  m_type = (parent->m_type == M2S_RWD) 
+            ? M2S_DATA
+            : S2M_DATA;
+  m_data = true;
+  m_parent = parent;
+  m_parent->m_childs.push_back(this);
+  m_vc_id = DATA_CHANNEL;
+  m_req = NULL;
+}
+
+void message_s::inc_arrived_child(void) {
+  m_arrived_child++;
+}
+
+bool message_s::child_waiting(void) {
+  return (m_arrived_child < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT));
+}
+
+void message_s::print(void) {
+  Addr addr = m_req ? m_req->m_addr : m_parent->m_req->m_addr;
+  std::cout << "(" << addr << ":" << msg_type_string[m_type] << ") ";
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -120,6 +138,7 @@ slot_s::slot_s(cxlsim_c* simBase) {
 void slot_s::init(void) {
   m_id = 0;
   m_bits = 0;
+  m_head = false;
   m_type = INVAL_SLOT;
   for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
     m_msg_cnt[ii] = 0;
@@ -150,8 +169,32 @@ bool slot_s::multi_msg(void) {
   else return false;
 }
 
+void slot_s::assign_type(void) {
+  if (m_head) {
+    if (m_msg_cnt[M2S_REQ]) m_type = H5;
+    else if (m_msg_cnt[M2S_RWD]) m_type = H4;
+    else if (m_msg_cnt[S2M_DRS]) m_type = H5;
+    else if (m_msg_cnt[S2M_NDR]) m_type = H4;
+    else if (m_msg_cnt[M2S_UOP] || m_msg_cnt[S2M_UOP]) m_type = HX;
+    else m_type = INVAL_SLOT;
+  } else {
+    if (m_msg_cnt[M2S_REQ]) m_type = G4;
+    else if (m_msg_cnt[M2S_RWD]) m_type = G5;
+    else if (m_msg_cnt[S2M_DRS] && m_msg_cnt[S2M_NDR]) m_type = G4;
+    else if (m_msg_cnt[S2M_NDR]) m_type = G5;
+    else if (m_msg_cnt[S2M_DRS]) m_type = G6;
+    else if (m_msg_cnt[M2S_DATA] || m_msg_cnt[S2M_DATA]) m_type = G0;
+    else if (m_msg_cnt[M2S_UOP] || m_msg_cnt[S2M_UOP]) m_type = GX;
+    else m_type = INVAL_SLOT;
+  }
+}
+
+void slot_s::set_head(void) {
+  m_head = true;
+}
+
 void slot_s::print(void) {
-  std::cout << "{";
+  std::cout << "{" << slot_type_str[m_type] << " ";
   for (auto msg : m_msgs) {
     msg->print();
   }
@@ -181,7 +224,7 @@ void flit_s::init(void) {
   m_slots.clear();
 }
 
-int flit_s::num_slots() {
+int flit_s::num_slots(void) {
   return (int)m_slots.size();
 }
 
@@ -201,17 +244,22 @@ void flit_s::push_front(slot_s* slot) {
   m_slots.push_front(slot);
 }
 
-/* void flit_s::insert_msg(message_s* msg) { */
-/* m_bits += msg->m_bits; */
-/* m_slots.push_back(msg); */
-/* } */
+bool flit_s::rollover(void) {
+  for (auto slot : m_slots) {
+    // there is a slot that is not a data slot
+    if (slot->m_type != G0) {
+      return false;
+    }
+  }
+  return (num_slots() < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT));
+}
 
 void flit_s::print(void) {
   std::cout << "FLT<";
   for (auto slot : m_slots) {
     slot->print();
   }
-  std::cout << m_bits;
+  std::cout << std::dec << m_bits;
   std::cout << " >" << std::endl;
 }
 

@@ -70,18 +70,24 @@ void vc_buff_c::init(bool is_tx, bool is_master,
 
   m_hslot_msg_limit[M2S_REQ] = 1;
   m_hslot_msg_limit[M2S_RWD] = 1;
+  m_hslot_msg_limit[M2S_UOP] = 1;
   m_hslot_msg_limit[S2M_DRS] = 2;
   m_hslot_msg_limit[S2M_NDR] = 2;
+  m_hslot_msg_limit[S2M_UOP] = 1;
 
-  m_hslot_msg_limit[M2S_REQ] = 1;
-  m_hslot_msg_limit[M2S_RWD] = 1;
-  m_hslot_msg_limit[S2M_DRS] = 1;
-  m_hslot_msg_limit[S2M_NDR] = 2;
+  m_gslot_msg_limit[M2S_REQ] = 1;
+  m_gslot_msg_limit[M2S_RWD] = 1;
+  m_gslot_msg_limit[M2S_UOP] = 1;
+  m_gslot_msg_limit[S2M_DRS] = 2;
+  m_gslot_msg_limit[S2M_NDR] = 2;
+  m_gslot_msg_limit[S2M_UOP] = 1;
 
   m_flit_msg_limit[M2S_REQ] = 2;
   m_flit_msg_limit[M2S_RWD] = 1;
+  m_flit_msg_limit[M2S_UOP] = 4;
   m_flit_msg_limit[S2M_DRS] = 3;
   m_flit_msg_limit[S2M_NDR] = 2;
+  m_flit_msg_limit[S2M_UOP] = 4;
 }
 
 bool vc_buff_c::full(int vc_id) {
@@ -103,8 +109,7 @@ int vc_buff_c::get_channel(cxl_req_s* req) {
 
 void vc_buff_c::insert(cxl_req_s* req) {
   int channel = get_channel(req);
-  auto new_msg = m_msg_pool->acquire_entry(m_simBase);
-  init_new_msg(new_msg, channel, req);
+  auto new_msg = acquire_message(channel, req);
   insert_channel(channel, new_msg);
 }
 
@@ -122,42 +127,158 @@ void vc_buff_c::generate_flits() {
     return;
   }
 
+  if (m_flit_buff.size() == 0) {
+    // new
+    generate_new_flit(rdy);
+  } else {
+    auto back_flit = m_flit_buff.back();
+
+    // rollover
+    if (back_flit->rollover()) {
+      auto hslot = generate_hslot(rdy);
+      if (hslot != NULL) {
+        back_flit->push_front(hslot);
+        add_data_slots_and_insert(back_flit, hslot);
+      }
+    } else if (back_flit->num_slots() < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+      // not rollover but not full
+      auto gslot = generate_gslot(rdy, back_flit);
+      if (gslot != NULL) {
+        back_flit->push_back(gslot);
+        add_data_slots_and_insert(back_flit, gslot);
+      }
+    } else {
+      // not rollover and full
+      generate_new_flit(rdy);
+    }
+  }
+}
+
+void vc_buff_c::generate_new_flit(std::list<message_s*>& msgs) {
   flit_s* new_flit = NULL;
-  slot_s* hslot = generate_hslot(rdy);
+  slot_s* hslot = generate_hslot(msgs);
   if (hslot != NULL) {
     new_flit = acquire_flit();
     new_flit->push_back(hslot);
 
     for (int ii = 0; ii < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT) - 1; ii++) {
-      if ((int)rdy.size() == 0) {
+      if ((int)msgs.size() == 0) {
         break;
       }
-      slot_s* gslot = generate_gslot(rdy, new_flit);
+      slot_s* gslot = generate_gslot(msgs, new_flit);
       if (gslot != NULL) {
         new_flit->push_back(gslot);
       }
     }
 
+    m_flit_buff.push_back(new_flit);
+
+    // check if the current flit contains resp/req w/ data
     add_data_slots_and_insert(new_flit);
   }
 }
 
+void vc_buff_c::add_data_slots_and_insert(flit_s* cur_flit, slot_s* slot) {
+  std::list<slot_s*> data_slots;
+  for (auto msg : slot->m_msgs) {
+    if (!msg->is_wdata_msg()) {
+      continue;
+    }
+    for (int ii = 0; ii < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT); ii++) {
+      auto data_msg = acquire_message(DATA_CHANNEL, NULL);
+      data_msg->init_data_msg(msg);
+
+      auto data_slot = acquire_slot();
+      data_slot->push_back(data_msg);
+      data_slot->assign_type();
+      data_slots.push_back(data_slot);
+    }
+  }
+
+  flit_s* new_flit = NULL;
+  for (auto data_slot : data_slots) {
+    if (cur_flit->num_slots() < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+      cur_flit->push_back(data_slot);
+    } else {
+      if (new_flit == NULL) {
+        new_flit = acquire_flit();
+      }
+      new_flit->push_back(data_slot);
+      if (new_flit->num_slots() == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+        m_flit_buff.push_back(new_flit);
+        new_flit = NULL;
+      }
+    }
+  }
+  if (new_flit != NULL) {
+    m_flit_buff.push_back(new_flit);
+  }
+}
+
 void vc_buff_c::add_data_slots_and_insert(flit_s* flit) {
-  m_flit_buff.push_back(flit);
+  std::list<slot_s*> data_slots;
+  for (auto slot : flit->m_slots) {
+    for (auto msg : slot->m_msgs) {
+      if (!msg->is_wdata_msg()) {
+        continue;
+      }
+      for (int ii = 0; ii < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT); ii++) {
+        auto data_msg = acquire_message(DATA_CHANNEL, NULL);
+        data_msg->init_data_msg(msg);
+
+        auto data_slot = acquire_slot();
+        data_slot->push_back(data_msg);
+        data_slot->assign_type();
+        data_slots.push_back(data_slot);
+      }
+    }
+  }
+
+  flit_s* new_flit = NULL;
+  for (auto data_slot : data_slots) {
+    if (flit->num_slots() < *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+      flit->push_back(data_slot);
+    } else {
+      if (new_flit == NULL) {
+        new_flit = acquire_flit();
+      }
+      new_flit->push_back(data_slot);
+      if (new_flit->num_slots() == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
+        m_flit_buff.push_back(new_flit);
+        new_flit = NULL;
+      }
+    }
+  }
+  if (new_flit != NULL) {
+    m_flit_buff.push_back(new_flit);
+  }
 }
 
 slot_s* vc_buff_c::generate_hslot(std::list<message_s*>& msgs) {
+  assert(!msgs.empty());
+
+  // wait for a certain period before inserting into a flit
+  auto msg = msgs.front();
+  if ((m_cycle - msg->m_txvc_start) < *KNOB(KNOB_PCIE_MAX_FLIT_WAIT_CYCLE)) {
+    return NULL;
+  }
+
   slot_s* new_slot = NULL;
   std::vector<message_s*> tmp;
   for (auto msg : msgs) {
     if (check_valid_header(new_slot, msg)) {
       if (new_slot == NULL) {
         new_slot = acquire_slot();
+        new_slot->set_head();
       }
       new_slot->push_back(msg);
       tmp.push_back(msg);
     }
   }
+
+  if (new_slot != NULL)
+    new_slot->assign_type();
+
   for (auto msg : tmp) {
     msgs.remove(msg);
     remove_msg(msg);
@@ -177,6 +298,10 @@ slot_s* vc_buff_c::generate_gslot(std::list<message_s*>& msgs, flit_s* flit) {
       tmp.push_back(msg);
     }
   }
+
+  if (new_slot != NULL)
+    new_slot->assign_type();
+
   for (auto msg : tmp) {
     msgs.remove(msg);
     remove_msg(msg);
@@ -239,7 +364,8 @@ void vc_buff_c::pop_flit() {
 message_s* vc_buff_c::pull_msg(int vc_id) {
   assert(!m_istx);
   for (auto msg : m_msg_buff) {
-    if ((msg->m_vc_id != vc_id) || (msg->m_rxvc_start > m_cycle)) {
+    if ((msg->m_vc_id != vc_id) || (msg->m_rxvc_start > m_cycle) ||
+        (msg->is_wdata_msg() && msg->child_waiting())) {
       continue;
     }
     remove_msg(msg);
@@ -248,7 +374,63 @@ message_s* vc_buff_c::pull_msg(int vc_id) {
   return NULL;
 }
 
-void vc_buff_c::init_new_msg(message_s* msg, int vc_id, cxl_req_s* req) {
+void vc_buff_c::insert_channel(int vc_id, message_s* msg) {
+  m_channel_cnt[msg->m_vc_id]++;
+  m_msg_buff.push_back(msg);
+  if (m_istx) {
+    msg->m_txvc_start = m_cycle + *KNOB(KNOB_PCIE_TXTRANS_LATENCY);
+  } else {
+    msg->m_rxvc_start = m_cycle + *KNOB(KNOB_PCIE_RXTRANS_LATENCY);
+  }
+}
+
+void vc_buff_c::remove_msg(message_s* msg) {
+  assert(m_channel_cnt[msg->m_vc_id] > 0);
+  m_channel_cnt[msg->m_vc_id]--;
+  m_msg_buff.remove(msg);
+}
+
+void vc_buff_c::remove_slot(slot_s* slot) {
+  m_slot_buff.remove(slot);
+}
+
+void vc_buff_c::run_a_cycle() {
+  m_cycle++;
+}
+
+void vc_buff_c::receive_flit(flit_s* flit) {
+  for (auto slot : flit->m_slots) {
+    for (auto msg : slot->m_msgs) {
+      if (msg->m_data) {
+        msg->m_parent->inc_arrived_child();
+        release_msg(msg);
+      } else {
+        insert_channel(msg->m_vc_id, msg);
+      }
+    }
+    release_slot(slot);
+  }
+  release_flit(flit);
+}
+
+void vc_buff_c::release_flit(flit_s* flit) {
+  flit->init();
+  m_flit_pool->release_entry(flit);
+}
+
+void vc_buff_c::release_slot(slot_s* slot) {
+  slot->init();
+  m_slot_pool->release_entry(slot);
+}
+
+void vc_buff_c::release_msg(message_s* msg) {
+  msg->init();
+  m_msg_pool->release_entry(msg);
+}
+
+message_s* vc_buff_c::acquire_message(int vc_id, cxl_req_s* req) {
+  message_s* msg = m_msg_pool->acquire_entry(m_simBase);
+
   msg->init();
   msg->m_id = ++m_msg_uid;
   msg->m_vc_id = vc_id;
@@ -291,50 +473,7 @@ void vc_buff_c::init_new_msg(message_s* msg, int vc_id, cxl_req_s* req) {
         break;
     }
   }
-}
-
-void vc_buff_c::insert_channel(int vc_id, message_s* msg) {
-  m_channel_cnt[msg->m_vc_id]++;
-  m_msg_buff.push_back(msg);
-  if (m_istx) {
-    msg->m_txvc_start = m_cycle + *KNOB(KNOB_PCIE_TXTRANS_LATENCY);
-  } else {
-    msg->m_rxvc_start = m_cycle + *KNOB(KNOB_PCIE_RXTRANS_LATENCY);
-  }
-}
-
-void vc_buff_c::remove_msg(message_s* msg) {
-  assert(m_channel_cnt[msg->m_vc_id] > 0);
-  m_channel_cnt[msg->m_vc_id]--;
-  m_msg_buff.remove(msg);
-}
-
-void vc_buff_c::remove_slot(slot_s* slot) {
-  m_slot_buff.remove(slot);
-}
-
-void vc_buff_c::run_a_cycle() {
-  m_cycle++;
-}
-
-void vc_buff_c::receive_flit(flit_s* flit) {
-  for (auto slot : flit->m_slots) {
-    for (auto msg : slot->m_msgs) {
-      insert_channel(msg->m_vc_id, msg);
-    }
-    release_slot(slot);
-  }
-  release_flit(flit);
-}
-
-void vc_buff_c::release_flit(flit_s* flit) {
-  flit->init();
-  m_flit_pool->release_entry(flit);
-}
-
-void vc_buff_c::release_slot(slot_s* slot) {
-  slot->init();
-  m_slot_pool->release_entry(slot);
+  return msg;
 }
 
 slot_s* vc_buff_c::acquire_slot() {
@@ -383,18 +522,6 @@ pcie_ep_c::pcie_ep_c(cxlsim_c* simBase) {
   m_txvc = new vc_buff_c(simBase);
   m_rxvc = new vc_buff_c(simBase);
   m_rxvc_bw = *KNOB(KNOB_PCIE_RXVC_BW);
-
-/* m_flit_ndr_cnt = 0; */
-/* m_flit_drs_cnt = 0; */
-/* m_slot_ndr_cnt = 0; */
-/* m_slot_drs_cnt = 0; */
-
-/* m_slot_cnt = 0; */
-
-/* m_max_flit_wait = *KNOB(KNOB_PCIE_MAX_FLIT_WAIT_CYCLE); */
-/* m_flit_wait_cycle = 0; */
-
-/* m_cur_flit = NULL; */
 
   // initialize dll
 /* m_txdll_cap = *KNOB(KNOB_PCIE_TXDLL_CAPACITY); */
@@ -482,49 +609,6 @@ Counter pcie_ep_c::get_phys_latency(flit_s* flit) {
   return static_cast<Counter>(flit->m_bits / (lanes * m_perlane_bw) * freq);
 }
 
-/* bool pcie_ep_c::dll_layer_full(bool tx) { */
-/* if (tx) { */
-/* return (m_txdll_cap <= (int)m_txdll_q.size()); */
-/* } else { */
-/* assert(0); */
-/* } */
-/* } */
-
-/* void pcie_ep_c::init_new_flit(flit_s* flit, int bits) { */
-/* flit->init(); */
-/* flit->m_id = ++m_flit_uid; */
-/* flit->m_bits = bits; */
-/* } */
-
-// FIXME
-void pcie_ep_c::parse_and_insert_flit(flit_s* flit) {
-/* Counter rxdll_start = flit->m_phys_end; */
-
-/* for (auto msg : flit->m_msgs) { */
-/* if (msg->m_data) { */
-/* ASSERTM(msg->m_parent, "Data message should have a parent req"); */
-
-/* msg->m_parent->m_arrived_child++; */
-/* } else { */
-/* int vc_id = msg->m_vc_id; */
-/* ASSERTM(m_rxvc_cap > (int)m_rxvc_buff[vc_id].size(), */
-/* "Due to flow control, rxvc should always have free space"); */
-
-/* msg->m_rxtrans_end = m_cycle + *KNOB(KNOB_PCIE_RXTRANS_LATENCY); */
-/* m_rxvc_buff[vc_id].push_back(msg); */
-/* } */
-
-/* // for stats */
-/* msg->m_rxvc_start = m_cycle; */
-
-/* // update stats */
-/* STAT_EVENT(PCIE_RXDLL_BASE); */
-/* STAT_EVENT_N(AVG_PCIE_RXDLL_LATENCY, m_cycle - rxdll_start); */
-/* } */
-
-/* release_flit(flit); */
-}
-
 void pcie_ep_c::refresh_replay_buffer() {
   while (m_txreplay_buff.size()) {
     flit_s* flit = m_txreplay_buff.front();
@@ -537,28 +621,6 @@ void pcie_ep_c::refresh_replay_buffer() {
     }
   }
 }
-
-/* void pcie_ep_c::add_and_push_data_msg(message_s* msg) { */
-/* assert(msg->m_req); */
-/* int data_slots = *KNOB(KNOB_PCIE_DATA_SLOTS_PER_FLIT); */
-
-/* for (int ii = 0; ii < data_slots; ii++) { */
-/* message_s* new_data_msg = m_msg_pool->acquire_entry(m_simBase); */
-
-/* init_new_msg(new_data_msg, DATA_CHANNEL, NULL); */
-
-/* new_data_msg->m_data = true; */
-/* new_data_msg->m_parent = msg; */
-/* new_data_msg->m_txtrans_end = m_cycle + *KNOB(KNOB_PCIE_TXTRANS_LATENCY); */
-/* new_data_msg->m_txdll_start = m_cycle; */
-
-/* msg->m_childs.push_back(new_data_msg); */
-/* m_txdll_q.push_back(new_data_msg); */
-
-/* assert(msg != new_data_msg); */
-/* assert(new_data_msg->m_childs.size() == 0); */
-/* } */
-/* } */
 
 void pcie_ep_c::release_msg(message_s* msg) {
   msg->init();
@@ -623,6 +685,10 @@ cxl_req_s* pcie_ep_c::pull_rxvc() {
     if (msg == NULL) {
       continue;
     }
+
+/* if (msg->is_wdata_msg()) */
+/* assert(msg->m_arrived_child == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)); */
+
     cxl_req_s* req = msg->m_req;
     release_msg(msg);
     return req;

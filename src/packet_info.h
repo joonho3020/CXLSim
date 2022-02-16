@@ -75,6 +75,18 @@ typedef enum MSG_TYPE {
   MAX_MSG_TYPES
 } MSG_TYPE;
 
+static const std::string msg_type_string[MAX_MSG_TYPES] = {
+  "REQ ",
+  "RWD ",
+  "DATA",
+  "UOP ",
+  "NDR ",
+  "DRS ",
+  "DATA",
+  "UOP ",
+  "INVALID"
+};
+
 typedef struct message_s {
   /**
    * Constructor
@@ -85,6 +97,9 @@ typedef struct message_s {
   bool is_wdata_msg(void);
   bool txvc_rdy(Counter cycle);
   bool rxvc_rdy(Counter cycle);
+  void init_data_msg(message_s* parent);
+  void inc_arrived_child();
+  bool child_waiting();
 
   int m_id; /**< unique request id */
   int m_bits;
@@ -113,12 +128,26 @@ typedef enum SLOT_TYPE {
   INVAL_SLOT = 0,
   H4, // M2S RwD / 2 S2M NDR
   H5, // M2S Req / 2 S2M DRS
+  HX, // UOP (temporary type for ndp)
   G0, // Data
   G4, // M2S Req + CXL.$ / S2M DRS + 2 S2M NDR
   G5, // M2S RwD + CXL.$ / 2 S2M NDR
   G6, // 3 S2M DRS
+  GX, // UOP (temporary type for ndp)
   MAX_SLOT_TYPES
 } SLOT_TYPE;
+
+static const std::string slot_type_str[MAX_SLOT_TYPES] = {
+  "INVAL_SLOT",
+  "H4",
+  "H5",
+  "HX",
+  "G0",
+  "G4",
+  "G5",
+  "G6",
+  "GX"
+};
 
 typedef struct slot_s {
   slot_s(cxlsim_c* simBase);
@@ -128,9 +157,12 @@ typedef struct slot_s {
   bool empty(void);
   bool is_data(void);
   bool multi_msg(void);
+  void assign_type(void);
+  void set_head(void);
 
   int m_id;
   int m_bits;
+  bool m_head;
   SLOT_TYPE m_type;
   int m_msg_cnt[MAX_MSG_TYPES];
   std::list<message_s*> m_msgs;
@@ -146,6 +178,7 @@ typedef struct flit_s {
   int num_slots(void);
   void push_back(slot_s* slot);
   void push_front(slot_s* slot);
+  bool rollover(void);
 /* void insert_msg(message_s* msg); */
 
   int m_id;

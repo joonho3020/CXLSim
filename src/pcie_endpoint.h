@@ -76,22 +76,26 @@ public:
   void print();
 
 private:
-  void init_new_msg(message_s* msg, int vc_id, cxl_req_s* req);
   void insert_channel(int vc_id, message_s* msg);
   void remove_msg(message_s* msg);
   void remove_slot(slot_s* slot);
   void release_flit(flit_s* flit);
   void release_slot(slot_s* slot);
+  void release_msg(message_s* msg);
+  message_s* acquire_message(int channel, cxl_req_s* req);
   slot_s* acquire_slot();
   flit_s* acquire_flit();
 
   // TODO
   slot_s* generate_hslot(std::list<message_s*>& msgs); // should call remove_msg
   slot_s* generate_gslot(std::list<message_s*>& msgs, flit_s* flit);
+  void generate_new_flit(std::list<message_s*>& msgs);
+
 
   bool check_valid_header(slot_s* slot, message_s* msg);
   bool check_valid_general(slot_s* slot, message_s* msg, flit_s* flit);
   void add_data_slots_and_insert(flit_s* flit);
+  void add_data_slots_and_insert(flit_s* cur_flit, slot_s* slot);
 
 public:
   static int m_msg_uid;

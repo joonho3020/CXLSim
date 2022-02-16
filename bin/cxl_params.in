@@ -38,7 +38,7 @@ pcie_drs_msg_bits 40
 pcie_uop_msg_bits 64
 
 # Flit wait cycles
-pcie_max_flit_wait_cycle 2
+pcie_max_flit_wait_cycle 5
 
 # ramulator
 ramulator_config_file DDR4-config.cfg
