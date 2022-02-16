@@ -48,6 +48,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace cxlsim {
 
+#define TX true
+#define RX false
+
+typedef enum channel_type {
+  WOD_CHANNEL= 0, /**< req/resp without data */
+  WD_CHANNEL,     /**< req/resp with data */
+  DATA_CHANNEL,   /**< data */
+  UOP_CHANNEL,    /**< uop */
+  MAX_CHANNEL
+} channel_type;
+
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct cxl_req_s {
@@ -110,12 +121,10 @@ typedef struct message_s {
   std::list<message_s*> m_childs;
   int m_arrived_child;
 
-  Counter m_txvc_start;
-  Counter m_txdll_start;
-  Counter m_rxvc_start;
-
-  Counter m_txtrans_end;
-  Counter m_rxtrans_end;  /**< rxlogic finished cycle */
+  Counter m_txvc_insert_start;
+  Counter m_txvc_insert_done;
+  Counter m_rxvc_insert_start;
+  Counter m_rxvc_insert_done;;
 
   int m_vc_id; /**< VC id */
 
@@ -179,15 +188,15 @@ typedef struct flit_s {
   void push_back(slot_s* slot);
   void push_front(slot_s* slot);
   bool rollover(void);
-/* void insert_msg(message_s* msg); */
 
   int m_id;
   int m_bits;
   bool m_phys_sent;
 
-  Counter m_txdll_end;
-  Counter m_phys_end;
-  Counter m_rxdll_end;
+  Counter m_txreplay_insert_start;
+  Counter m_txreplay_insert_done;
+  Counter m_phys_done;
+  Counter m_rxdll_done;
 
   int m_msg_cnt[MAX_MSG_TYPES];
   std::list<slot_s*> m_slots;

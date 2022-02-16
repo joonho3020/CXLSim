@@ -14,6 +14,7 @@ SET(CXLLIB_SOURCES
   packet_info.cc
   pcie_endpoint.cc
   pcie_rc.cc
+  pcie_vcbuff.cc
   ramulator_wrapper.cc
   statistics.cc
 )

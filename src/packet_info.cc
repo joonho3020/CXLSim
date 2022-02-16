@@ -80,12 +80,10 @@ void message_s::init(void) {
   m_childs.clear();
   m_arrived_child = 0;
 
-  m_txvc_start = 0;
-  m_txdll_start = 0;
-  m_rxvc_start = 0;
-
-  m_txtrans_end = 0;
-  m_rxtrans_end = 0;
+  m_txvc_insert_start = 0;
+  m_txvc_insert_done = 0;
+  m_rxvc_insert_start = 0;
+  m_rxvc_insert_done = 0;
 
   m_vc_id = -1;
   m_req = NULL;
@@ -96,10 +94,10 @@ bool message_s::is_wdata_msg(void) {
 }
 
 bool message_s::txvc_rdy(Counter cycle) {
-  return m_txvc_start <= cycle;
+  return m_txvc_insert_done <= cycle;
 }
 bool message_s::rxvc_rdy(Counter cycle) {
-  return m_rxvc_start <= cycle;
+  return m_rxvc_insert_done <= cycle;
 }
 
 void message_s::init_data_msg(message_s* parent) {
@@ -213,9 +211,10 @@ void flit_s::init(void) {
   m_bits = 0;
   m_phys_sent = false;
 
-  m_txdll_end = 0;
-  m_phys_end = 0;
-  m_rxdll_end = 0;
+  m_txreplay_insert_start = 0;
+  m_txreplay_insert_done = 0;
+  m_phys_done = 0;
+  m_rxdll_done = 0;
 
   for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
     m_msg_cnt[ii] = 0;

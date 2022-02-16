@@ -46,86 +46,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace cxlsim {
 
-#define TX true
-#define RX false
-
-#define WOD_CHANNEL 0
-#define WD_CHANNEL 1
-#define DATA_CHANNEL 2
-
-///////////////////////////////////////////////////////////////////////////////
-class vc_buff_c {
-public:
-  vc_buff_c(cxlsim_c* simBase);
-  void init(bool is_tx, bool is_master, 
-            pool_c<message_s>* msg_pool, 
-            pool_c<slot_s>* slot_pool,
-            pool_c<flit_s>* flit_pool,
-            int capacity);
-  bool full(int vc_id); /**< true if vc_id is full, otherwise false */
-  bool empty(int vc_id);
-  int free(int vc_id); /**< number of free entries */
-  int get_channel(cxl_req_s* req);
-  void insert(cxl_req_s* req); // generate msg inside
-  void generate_flits();
-  flit_s* peek_flit();
-  void pop_flit();
-  message_s* pull_msg(int vc_id);
-  void receive_flit(flit_s* flit);
-  void run_a_cycle();
-  void print();
-
-private:
-  void insert_channel(int vc_id, message_s* msg);
-  void remove_msg(message_s* msg);
-  void remove_slot(slot_s* slot);
-  void release_flit(flit_s* flit);
-  void release_slot(slot_s* slot);
-  void release_msg(message_s* msg);
-  message_s* acquire_message(int channel, cxl_req_s* req);
-  slot_s* acquire_slot();
-  flit_s* acquire_flit();
-
-  // TODO
-  slot_s* generate_hslot(std::list<message_s*>& msgs); // should call remove_msg
-  slot_s* generate_gslot(std::list<message_s*>& msgs, flit_s* flit);
-  void generate_new_flit(std::list<message_s*>& msgs);
-
-
-  bool check_valid_header(slot_s* slot, message_s* msg);
-  bool check_valid_general(slot_s* slot, message_s* msg, flit_s* flit);
-  void add_data_slots_and_insert(flit_s* flit);
-  void add_data_slots_and_insert(flit_s* cur_flit, slot_s* slot);
-
-public:
-  static int m_msg_uid;
-  static int m_slot_uid;
-  static int m_flit_uid;
-
-private:
-  pool_c<message_s>* m_msg_pool;
-  pool_c<slot_s>* m_slot_pool;
-  pool_c<flit_s>* m_flit_pool;
-
-  std::list<message_s*> m_msg_buff;
-  std::list<slot_s*> m_slot_buff;
-  std::list<flit_s*> m_flit_buff;
-
-/* int m_msg_cnt[MAX_MSG_TYPES]; */
-  int m_channel_cnt[MAX_CHANNEL];
-  int m_channel_cap;
-
-  int m_hslot_msg_limit[MAX_MSG_TYPES];
-  int m_gslot_msg_limit[MAX_MSG_TYPES];
-  int m_flit_msg_limit[MAX_MSG_TYPES];
-
-  bool m_istx;
-  bool m_master;
-
-  Counter m_cycle;
-  cxlsim_c* m_simBase;
-};
-
 class pcie_ep_c {
 public:
   /**
@@ -173,39 +93,18 @@ private:
   /**
    * Gets cycles required to transfer the packet over physical layer
    */
-  Counter get_phys_latency(flit_s* pkt);
-
-  /**
-   * Checks if m_*xdll_q is full
-   */
-/* bool dll_layer_full(bool tx); */
-
-  void init_new_flit(flit_s* flit, int bits);
-
-  /**
-   * RX side dll layer parses the flit and inserts each message
-   * into the correct VC
-   */
-  void parse_and_insert_flit(flit_s* flit);
+  Counter get_phys_latency();
 
   /**
    * Checks & updates the state of entries if the flit is received by the peer
    */
   void refresh_replay_buffer(void);
 
-  /**
-   * For with-data msgs, add data messages and insert them to the txdll
-   */
-/* void add_and_push_data_msg(message_s* msg); */
-
-
   /*
    * Release msg
    */
   void release_msg(message_s* msg);
 
-<<<<<<< HEAD
-=======
   /**
    * Checks if the peer has enough rxvc entries left for this message type
    * (for flow control)
@@ -213,9 +112,6 @@ private:
   bool check_peer_credit(message_s* msg);
   bool check_peer_credit(flit_s* flit);
 
-
-
->>>>>>> b277b20 (add slots to cxlsim)
 protected:
   /**
    * Start PCIe transaction by inserting requests
@@ -264,14 +160,12 @@ private:
   vc_buff_c* m_rxvc;
 
   int m_rxvc_bw; /**< VC buffer BW */
-
-/* int m_txdll_cap; /**< dll layer queue capacity *1/ */
-/* std::list<message_s*> m_txdll_q; /**< dll layer queue *1/ */
   int m_txreplay_cap; /**< replay buffer capacity */
   std::list<flit_s*> m_txreplay_buff; /**< replay buffer */
 
   int m_phys_cap; /**< maximum numbers of packets in physical layer q */
   std::list<flit_s*> m_rxphys_q; /**< physical layer receive queue */
+  Counter m_phys_latency;
 
 public:
   pcie_ep_c* m_peer_ep; /**< endpoint connected to this endpoint */
