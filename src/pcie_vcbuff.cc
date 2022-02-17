@@ -54,6 +54,10 @@ int vc_buff_c::m_flit_uid;
 vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
   m_simBase = simBase;
   m_cycle = 0;
+
+  for (int ii = 0; ii < MAX_CHANNEL; ii++) {
+    m_channel_cnt[ii] = 0;
+  }
 }
 
 void vc_buff_c::init(bool is_tx, bool is_master, 
