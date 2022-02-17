@@ -285,8 +285,13 @@ void pcie_ep_c::process_txdll() {
         for (auto slot : flit->m_slots) {
           for (auto msg : slot->m_msgs) {
             STAT_EVENT(PCIE_TXTRANS_BASE);
-            STAT_EVENT_N(AVG_PCIE_TXTRANS_LATENCY, 
-                        (m_cycle - msg->m_txvc_insert_start));
+            if (msg->m_data) {
+              STAT_EVENT_N(AVG_PCIE_TXTRANS_LATENCY, 
+                  (m_cycle - msg->m_parent->m_txvc_insert_start));
+            } else {
+              STAT_EVENT_N(AVG_PCIE_TXTRANS_LATENCY, 
+                  (m_cycle - msg->m_txvc_insert_start));
+            }
           }
         }
       }
@@ -326,7 +331,7 @@ void pcie_ep_c::process_txphys() {
 
         // update dll stats
         STAT_EVENT(PCIE_TXDLL_BASE);
-        STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY, 
+        STAT_EVENT_N(AVG_PCIE_TXDLL_LATENCY,
                     (m_cycle - cur_flit->m_txreplay_insert_start));
 
         // update goodput related stats
