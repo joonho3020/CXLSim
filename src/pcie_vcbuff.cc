@@ -74,24 +74,18 @@ void vc_buff_c::init(bool is_tx, bool is_master,
 
   m_hslot_msg_limit[M2S_REQ] = 1;
   m_hslot_msg_limit[M2S_RWD] = 1;
-  m_hslot_msg_limit[M2S_UOP] = 1;
   m_hslot_msg_limit[S2M_DRS] = 2;
   m_hslot_msg_limit[S2M_NDR] = 2;
-  m_hslot_msg_limit[S2M_UOP] = 1;
 
   m_gslot_msg_limit[M2S_REQ] = 1;
   m_gslot_msg_limit[M2S_RWD] = 1;
-  m_gslot_msg_limit[M2S_UOP] = 1;
   m_gslot_msg_limit[S2M_DRS] = 2;
   m_gslot_msg_limit[S2M_NDR] = 2;
-  m_gslot_msg_limit[S2M_UOP] = 1;
 
   m_flit_msg_limit[M2S_REQ] = 2;
   m_flit_msg_limit[M2S_RWD] = 1;
-  m_flit_msg_limit[M2S_UOP] = 4;
   m_flit_msg_limit[S2M_DRS] = 3;
   m_flit_msg_limit[S2M_NDR] = 2;
-  m_flit_msg_limit[S2M_UOP] = 4;
 }
 
 bool vc_buff_c::full(int vc_id) {
@@ -107,8 +101,7 @@ int vc_buff_c::free(int vc_id) {
 }
 
 int vc_buff_c::get_channel(cxl_req_s* req) {
-  if (req->m_isuop) return UOP_CHANNEL;
-  else if (req->m_write) return m_master ? WD_CHANNEL : WOD_CHANNEL;
+  if (req->m_write) return m_master ? WD_CHANNEL : WOD_CHANNEL;
   else return m_master ? WOD_CHANNEL : WD_CHANNEL;
 }
 
@@ -443,10 +436,6 @@ message_s* vc_buff_c::acquire_message(int vc_id, cxl_req_s* req) {
         msg->m_type = M2S_DATA;
         msg->m_bits = *KNOB(KNOB_PCIE_DATA_MSG_BITS);
         break;
-      case UOP_CHANNEL:
-        msg->m_type = M2S_UOP;
-        msg->m_bits = *KNOB(KNOB_PCIE_UOP_MSG_BITS);
-        break;
       default:
         assert(0);
         break;
@@ -464,10 +453,6 @@ message_s* vc_buff_c::acquire_message(int vc_id, cxl_req_s* req) {
       case DATA_CHANNEL:
         msg->m_type = S2M_DATA;
         msg->m_bits = *KNOB(KNOB_PCIE_DATA_MSG_BITS);
-        break;
-      case UOP_CHANNEL:
-        msg->m_type = S2M_UOP;
-        msg->m_bits = *KNOB(KNOB_PCIE_UOP_MSG_BITS);
         break;
       default:
         assert(0);

@@ -133,6 +133,7 @@ void core_c::run_sim() {
   while (m_return_reqs < tot_reqs) {
     run_a_cycle(false);
   }
+  std::cout << "Unit test success" << std::endl;
 }
 
 void core_c::core_callback(Addr addr, bool write, void *req) {

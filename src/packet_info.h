@@ -90,11 +90,9 @@ static const std::string msg_type_string[MAX_MSG_TYPES] = {
   "REQ ",
   "RWD ",
   "DATA",
-  "UOP ",
   "NDR ",
   "DRS ",
   "DATA",
-  "UOP ",
   "INVALID"
 };
 

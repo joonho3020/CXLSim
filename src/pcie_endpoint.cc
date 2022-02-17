@@ -185,10 +185,8 @@ void pcie_ep_c::start_transaction() {
 
 // used for start_transaction
 bool pcie_ep_c::push_txvc(cxl_req_s* cxl_req) {
-  message_s* new_msg;
-  int channel;
-
   assert(cxl_req);
+  message_s* new_msg;
   int channel = m_txvc->get_channel(cxl_req);;
 
   if (m_txvc->full(channel)) {

@@ -173,7 +173,6 @@ void slot_s::assign_type(void) {
     else if (m_msg_cnt[M2S_RWD]) m_type = H4;
     else if (m_msg_cnt[S2M_DRS]) m_type = H5;
     else if (m_msg_cnt[S2M_NDR]) m_type = H4;
-    else if (m_msg_cnt[M2S_UOP] || m_msg_cnt[S2M_UOP]) m_type = HX;
     else m_type = INVAL_SLOT;
   } else {
     if (m_msg_cnt[M2S_REQ]) m_type = G4;
@@ -182,7 +181,6 @@ void slot_s::assign_type(void) {
     else if (m_msg_cnt[S2M_NDR]) m_type = G5;
     else if (m_msg_cnt[S2M_DRS]) m_type = G6;
     else if (m_msg_cnt[M2S_DATA] || m_msg_cnt[S2M_DATA]) m_type = G0;
-    else if (m_msg_cnt[M2S_UOP] || m_msg_cnt[S2M_UOP]) m_type = GX;
     else m_type = INVAL_SLOT;
   }
 }
