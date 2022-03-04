@@ -280,4 +280,9 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   m_req_pool->release_entry(req);
 }
 
+void cxlsim_c::print() {
+  m_rc->print_rc_info();
+  m_mxp->print_cxlt3_info();
+}
+
 } // namespace CXL
