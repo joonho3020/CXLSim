@@ -191,6 +191,8 @@ typedef struct flit_s {
   int m_bits;
   bool m_phys_sent;
 
+  Counter m_flit_gen_cycle;
+
   Counter m_txreplay_insert_start;
   Counter m_txreplay_insert_done;
   Counter m_phys_start;

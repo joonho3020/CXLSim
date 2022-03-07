@@ -14,9 +14,9 @@ pcie_rxvc_bw 4
 # Capacity params
 pcie_txvc_capacity 8
 pcie_rxvc_capacity 8
-pcie_txdll_capacity 8
-pcie_phys_capacity 8
 pcie_txreplay_capacity 8
+pcie_txflitbuff_capacity 8
+pcie_rxflitbuff_capacity 8
 
 # Latency params
 pcie_txtrans_latency 5
@@ -27,14 +27,12 @@ pcie_arbmux_latency 2
 
 # Don't touch
 pcie_flit_bits 528
-pcie_data_slots_per_flit 4
 
 pcie_data_msg_bits 128
 pcie_req_msg_bits 87
 pcie_rwd_msg_bits 87
 pcie_ndr_msg_bits 30
 pcie_drs_msg_bits 40
-pcie_uop_msg_bits 64
 
 # Flit wait cycles
 pcie_max_flit_wait_cycle 2
@@ -42,46 +40,9 @@ pcie_max_flit_wait_cycle 2
 # ramulator
 ramulator_config_file DDR4-config.cfg
 
-# NDP
-uop_direct_offload 0
-
-# NDP cache
-cacheline_offset_bits 6
-ndp_cache_set 4
-ndp_cache_assoc 2
-ndp_mshr_assoc 2
-ndp_mshr_cap 2
-ndp_scheduler in_order
-ndp_max_issue 6
-
-nop_port_cnt 4
-iadd_port_cnt 4
-imul_port_cnt 1
-idiv_port_cnt 1
-imisc_port_cnt 2
-fadd_port_cnt 2
-fmul_port_cnt 1
-fdiv_port_cnt 1
-fmisc_port_cnt 2
-cache_port_cnt 4
-
-nop_port_lat 1
-iadd_port_lat 1
-imul_port_lat 4
-idiv_port_lat 8
-imisc_port_lat 2
-fadd_port_lat 8
-fmul_port_lat 4
-fdiv_port_lat 16
-fmisc_port_lat 2
-cache_port_lat 3
-
 # DEBUG
-debug_io_sys 1
-debug_callback 1
-debug_uop 0
-debug_cache 0
-debug_port 0
+debug_io_sys 0
+debug_callback 0
 
 # OUTPUT Redirect
 out ../stats

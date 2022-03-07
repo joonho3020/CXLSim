@@ -36,6 +36,10 @@ param<PCIE_PER_LANE_BW, pcie_per_lane_bw, float, 32>
 
 param<PCIE_TXVC_CAPACITY, pcie_txvc_capacity, int, 8>
 param<PCIE_RXVC_CAPACITY, pcie_rxvc_capacity, int, 8>
+
+param<PCIE_TXFLITBUFF_CAPACITY, pcie_txflitbuff_capacity, int, 32>
+param<PCIE_RXFLITBUFF_CAPACITY, pcie_rxflitbuff_capacity, int, 32>
+
 param<PCIE_RXVC_BW, pcie_rxvc_bw, int, 4>
 param<PCIE_TXVC_BW, pcie_txvc_bw, int, 4>
 
@@ -67,6 +71,10 @@ param<STATISTICS_OUT_DIRECTORY, out, std::string, .>
 /* Debug flags */
 param<DEBUG_IO_SYS, debug_io_sys, int, 0>
 param<DEBUG_CALLBACK, debug_callback, int, 0>
+
+/* Progress limit */
+param<PROGRESS_LIMIT, progress_limit, uint64_t, 1000>
+param<FORWARD_PROGRESS_PERIOD, forward_progress_period, int, 100>
 
 /* Ramulator configs */
 param<RAMULATOR_CONFIG_FILE, ramulator_config_file, std::string, DDR4-config.cfg>

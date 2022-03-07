@@ -111,12 +111,17 @@ void pcie_ep_c::init(int id, bool master, pool_c<message_s>* msg_pool,
   m_flit_pool = flit_pool;
   m_peer_ep = peer;
 
-  int tx_cap = *KNOB(KNOB_PCIE_TXVC_CAPACITY);
-  int rx_cap = *KNOB(KNOB_PCIE_RXVC_CAPACITY);
+  int tx_channel_cap = *KNOB(KNOB_PCIE_TXVC_CAPACITY);
+  int rx_channel_cap = *KNOB(KNOB_PCIE_RXVC_CAPACITY);
+  int tx_flitbuff_cap = *KNOB(KNOB_PCIE_TXFLITBUFF_CAPACITY);
+  int rx_flitbuff_cap = *KNOB(KNOB_PCIE_RXFLITBUFF_CAPACITY);
+
   m_txvc->init(/* tx? */true,  m_master, 
-                m_msg_pool, m_slot_pool, m_flit_pool, tx_cap);
+                m_msg_pool, m_slot_pool, m_flit_pool, 
+                tx_channel_cap, tx_flitbuff_cap);
   m_rxvc->init(/* tx? */false, m_master, 
-                m_msg_pool, m_slot_pool, m_flit_pool, tx_cap);
+                m_msg_pool, m_slot_pool, m_flit_pool,
+                rx_channel_cap, rx_flitbuff_cap);
 }
 
 void pcie_ep_c::run_a_cycle(bool pll_locked) {
@@ -189,9 +194,10 @@ bool pcie_ep_c::push_txvc(cxl_req_s* cxl_req) {
   message_s* new_msg;
   int channel = m_txvc->get_channel(cxl_req);;
 
-  if (m_txvc->full(channel)) {
+  if (m_txvc->full(channel) || m_txvc->flit_full()) {
     return false;
   } else {
+    assert(m_txvc->free(channel) > 0);
     m_txvc->insert(cxl_req);
     return true;
   }
@@ -251,7 +257,7 @@ bool pcie_ep_c::check_peer_credit(flit_s* flit) {
   bool success = true;
   for (auto slot : flit->m_slots) {
     for (auto msg : slot->m_msgs) {
-      success = check_peer_credit(msg);
+      success &= check_peer_credit(msg);
     }
   }
   return success;

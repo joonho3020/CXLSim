@@ -209,6 +209,8 @@ void flit_s::init(void) {
   m_bits = 0;
   m_phys_sent = false;
 
+  m_flit_gen_cycle = 0;
+
   m_txreplay_insert_start = 0;
   m_txreplay_insert_done = 0;
   m_phys_start = 0;

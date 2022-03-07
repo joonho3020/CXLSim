@@ -52,8 +52,10 @@ public:
             pool_c<message_s>* msg_pool, 
             pool_c<slot_s>* slot_pool,
             pool_c<flit_s>* flit_pool,
-            int capacity);
+            int channel_cap,
+            int flitbuff_cap);
   bool full(int vc_id); /**< true if vc_id is full, otherwise false */
+  bool flit_full();
   bool empty(int vc_id); /**< true if vc_id is empty, otherwise false */
   int free(int vc_id); /**< number of free entries */
   int get_channel(cxl_req_s* req); /**< get channel id of request */
@@ -85,6 +87,8 @@ private:
   void add_data_slots_and_insert(flit_s* flit, slot_s* slot);
   void insert_data_slots(flit_s* flit, std::list<slot_s*>& data_slots);
 
+  void forward_progress_check();
+
 public:
   static int m_msg_uid;
   static int m_slot_uid;
@@ -100,6 +104,7 @@ private:
 
   int m_channel_cnt[MAX_CHANNEL];
   int m_channel_cap; /**< channel capacity */
+  int m_flitbuff_cap;
 
   int m_hslot_msg_limit[MAX_MSG_TYPES]; /**< limit conditions */
   int m_gslot_msg_limit[MAX_MSG_TYPES];

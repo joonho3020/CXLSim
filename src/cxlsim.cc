@@ -172,7 +172,8 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   }
 
   // print messages for debugging
-  if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
+  if (m_knobs->KNOB_DEBUG_IO_SYS->getValue() ||
+      (m_cycle % m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue() == 0)) {
     std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
     m_mxp->print_cxlt3_info();
     m_rc->print_rc_info();

@@ -64,13 +64,15 @@ void vc_buff_c::init(bool is_tx, bool is_master,
                         pool_c<message_s>* msg_pool, 
                         pool_c<slot_s>* slot_pool, 
                         pool_c<flit_s>* flit_pool,
-                        int capacity) {
+                        int chan_cap,
+                        int flitbuff_cap) {
   m_istx = is_tx;
   m_master = is_master;
   m_msg_pool = msg_pool;
   m_slot_pool = slot_pool;
   m_flit_pool = flit_pool;
-  m_channel_cap = capacity;
+  m_channel_cap = chan_cap;
+  m_flitbuff_cap = flitbuff_cap;
 
   m_hslot_msg_limit[M2S_REQ] = 1;
   m_hslot_msg_limit[M2S_RWD] = 1;
@@ -90,6 +92,10 @@ void vc_buff_c::init(bool is_tx, bool is_master,
 
 bool vc_buff_c::full(int vc_id) {
   return (m_channel_cnt[vc_id] >= m_channel_cap);
+}
+
+bool vc_buff_c::flit_full() {
+  return ((int)m_flit_buff.size() >= m_flitbuff_cap);
 }
 
 bool vc_buff_c::empty(int vc_id) {
@@ -153,9 +159,16 @@ void vc_buff_c::receive_flit(flit_s* flit) {
 
 void vc_buff_c::run_a_cycle() {
   m_cycle++;
+
+  uint64_t check_cycles = *KNOB(KNOB_FORWARD_PROGRESS_PERIOD);
+  if (m_cycle % check_cycles == 0) {
+    forward_progress_check();
+  }
 }
 
 void vc_buff_c::generate_flits() {
+  assert(m_istx);
+
   std::list<message_s*> rdy;
   for (auto msg : m_msg_buff) {
     if ((m_istx && msg->txvc_rdy(m_cycle)) ||
@@ -215,6 +228,7 @@ void vc_buff_c::generate_new_flit(std::list<message_s*>& msgs) {
     }
 
     m_flit_buff.push_back(new_flit);
+    new_flit->m_flit_gen_cycle = m_cycle;
 
     // check if the current flit contains resp/req w/ data
     add_data_slots_and_insert(new_flit);
@@ -281,6 +295,7 @@ void vc_buff_c::insert_data_slots(flit_s* flit, std::list<slot_s*>& data_slots) 
   }
   if (new_flit != NULL) {
     m_flit_buff.push_back(new_flit);
+    new_flit->m_flit_gen_cycle = m_cycle;
   }
 }
 
@@ -474,6 +489,22 @@ flit_s* vc_buff_c::acquire_flit() {
   new_flit->init();
   new_flit->m_id = ++m_flit_uid;
   return new_flit;
+}
+
+void vc_buff_c::forward_progress_check() {
+  for (auto msg : m_msg_buff) {
+    if (m_istx) {
+      assert(m_cycle - msg->m_txvc_insert_start <= *KNOB(KNOB_PROGRESS_LIMIT));
+    } else {
+      assert(m_cycle - msg->m_rxvc_insert_start <= *KNOB(KNOB_PROGRESS_LIMIT));
+    }
+  }
+
+  for (auto flit : m_flit_buff) {
+    if (m_istx) {
+      assert(m_cycle - flit->m_flit_gen_cycle <= *KNOB(KNOB_PROGRESS_LIMIT));
+    }
+  }
 }
 
 void vc_buff_c::print() {
