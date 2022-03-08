@@ -286,7 +286,10 @@ void vc_buff_c::insert_data_slots(flit_s* flit, std::list<slot_s*>& data_slots) 
       if (new_flit == NULL) {
         new_flit = acquire_flit();
       }
+
       new_flit->push_back(data_slot);
+      new_flit->m_flit_gen_cycle = m_cycle;
+
       if (new_flit->num_slots() == *KNOB(KNOB_PCIE_SLOTS_PER_FLIT)) {
         m_flit_buff.push_back(new_flit);
         new_flit = NULL;

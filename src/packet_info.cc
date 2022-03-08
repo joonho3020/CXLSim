@@ -259,7 +259,7 @@ void flit_s::print(void) {
   for (auto slot : m_slots) {
     slot->print();
   }
-  std::cout << std::dec << m_bits << " " << m_phys_done << " " << m_rxdll_done << " ";
+  std::cout << std::dec << m_bits << " " << m_phys_done << " " << m_rxdll_done << " " << m_flit_gen_cycle;
   std::cout << " >" << std::endl;
 }
 
