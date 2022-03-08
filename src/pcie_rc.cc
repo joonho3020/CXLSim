@@ -123,10 +123,10 @@ void pcie_rc_c::print_rc_info() {
   std::cout << "-------------- Root Complex ------------------" << std::endl;
   print_ep_info();
 
-  std::cout << "pending q" << ": ";
-  for (auto req : m_pending_req) {
-    std::cout << std::hex << req->m_addr << " ; ";
-  }
+/* std::cout << "pending q" << ": "; */
+/* for (auto req : m_pending_req) { */
+/* std::cout << std::hex << req->m_addr << " ; "; */
+/* } */
 
   std::cout << "done q" << ": ";
   for (auto req : m_done_req) {

@@ -240,10 +240,10 @@ void cxlt3_c::print_cxlt3_info() {
     std::cout << std::endl;
   }
 
-  for (auto iter : *m_pending_req) {
-    auto addr = iter->m_addr;
-    std::cout << "Addr: " << std::hex << addr << ": ";
-  }
+/* for (auto iter : *m_pending_req) { */
+/* auto addr = iter->m_addr; */
+/* std::cout << "Addr: " << std::hex << addr << ": "; */
+/* } */
   std::cout << std::endl;
 }
 

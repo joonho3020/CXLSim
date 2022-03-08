@@ -82,12 +82,7 @@ void core_c::set_tracefile(std::string filename) {
 
 void core_c::insert_request(Addr addr, bool write) {
   core_req_s* new_req = new core_req_s(addr, write);
-
-  if (m_simBase->insert_request(addr, write, (void*)new_req)) {
-    // do nothing
-  } else {
-    m_pending_q.push_back(new_req);
-  }
+  m_pending_q.push_back(new_req);
 
   // debug messages
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
@@ -121,7 +116,7 @@ void core_c::run_sim() {
         int type;
         bool write;
 
-        std::sscanf(line.c_str(), "%llx %d", &addr, &type);
+        std::sscanf(line.c_str(), "%llu %d", &addr, &type);
         write = (type == 1);
         insert_request(addr, write);
         tot_reqs++;
