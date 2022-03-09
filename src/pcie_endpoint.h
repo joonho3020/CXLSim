@@ -152,7 +152,7 @@ private:
   pool_c<slot_s>* m_slot_pool;
   pool_c<flit_s>* m_flit_pool; /**< flit pool */
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 public:
 #endif
   int m_lanes; /**< PCIe lanes connected to endpoint */

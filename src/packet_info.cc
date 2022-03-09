@@ -124,7 +124,8 @@ bool message_s::child_waiting(void) {
 
 void message_s::print(void) {
   Addr addr = m_req ? m_req->m_addr : m_parent->m_req->m_addr;
-  std::cout << "(" << addr << ":" << msg_type_string[m_type] << ") ";
+  Counter id = m_req ? m_req->m_id : m_parent->m_req->m_id;
+  std::cout << "(" << id << ":" << addr << ":" << msg_type_string[m_type] << ") ";
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -189,7 +190,7 @@ void slot_s::set_head(void) {
   m_head = true;
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 int slot_s::get_req_resp(void) {
   return m_msg_cnt[M2S_REQ] + m_msg_cnt[M2S_RWD] +
          m_msg_cnt[S2M_NDR] + m_msg_cnt[S2M_DRS];
@@ -224,7 +225,7 @@ void flit_s::init(void) {
   m_phys_done = 0;
   m_rxdll_done = 0;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_reqresp_cnt = 0;
 #endif
 
@@ -246,12 +247,12 @@ void flit_s::push_back(slot_s* slot) {
   }
   m_slots.push_back(slot);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_reqresp_cnt += slot->get_req_resp();
 #endif
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 int flit_s::get_req_resp() {
   int sum = 0;
   for (auto slot : m_slots) {
@@ -271,7 +272,7 @@ void flit_s::push_front(slot_s* slot) {
   }
   m_slots.push_front(slot);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_reqresp_cnt += slot->get_req_resp();
 #endif
 }

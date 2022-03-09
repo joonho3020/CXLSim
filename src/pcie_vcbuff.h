@@ -116,7 +116,7 @@ private:
   Counter m_cycle;
   cxlsim_c* m_simBase;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 public:
   Counter m_in_flight_reqs;
   Counter get_in_flight_reqs();

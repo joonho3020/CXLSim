@@ -47,7 +47,7 @@ POSSIBILITY OF SUCH DAMAGE.
 namespace cxlsim {
 
 // outer simulator callback function
-typedef CallbackBase<void, Addr, bool, void*> callback_t;
+typedef CallbackBase<void, Addr, bool, Counter, void*> callback_t;
 
 typedef enum CLOCK_DOMAIN {
   CLOCK_IO = 0,
@@ -87,7 +87,7 @@ public:
    * - it can take a arbitrary pointer type of the outer simulator (void* req)
    *   and return it by the registered callback function
    */
-  bool insert_request(Addr addr, bool write, void* req);
+  Counter insert_request(Addr addr, bool write, void* req);
 
   /**
    * Tick a cycle
@@ -137,6 +137,8 @@ private:
   pool_c<slot_s>* m_slot_pool; /**< memory pool for slots */
   pool_c<flit_s>* m_flit_pool; /**< memory pool for flits */
 
+  static Counter m_req_id;
+
   callback_t* m_trans_done_cb; /* callback function for the outer simultor */
 
   int m_clock_lcm;    /**< lcm of clock domains */
@@ -145,9 +147,13 @@ private:
   int *m_domain_next;
   int m_clock_internal; /**<< internal clock of simulator */
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 public:
   Counter m_in_flight_reqs;
+#endif
+
+public:
+#ifdef CXL_DEBUG
   Counter get_in_flight_reqs();
 #endif
 };

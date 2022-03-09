@@ -73,7 +73,7 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
   // init others
   m_cycle_internal = 0;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_in_flight_reqs = 0;
 #endif
 }
@@ -102,7 +102,7 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
 
   m_cycle++;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   Counter cnt = 0;
   for (auto req_list : m_mxp_reads) {
     cnt += (Counter)req_list.second.size();
@@ -175,7 +175,7 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
   auto cb_func = (is_write) ? m_write_cb_func : m_read_cb_func;
   long addr = static_cast<long>(req->m_addr);
 
-  ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id);
+  ramulator::Request ramu_req(addr, req_type, cb_func, 0);
   bool accepted = m_ramu_wrapper->send(ramu_req);
 
   if (accepted) {
@@ -223,7 +223,7 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   m_mxp_resp_queue.push_back(req);
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 Counter cxlt3_c::get_in_flight_reqs() {
   Counter cnt = 0;
   for (auto flit : m_txreplay_buff) {

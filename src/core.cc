@@ -68,11 +68,11 @@ core_c::core_c(cxlsim_c* simBase) {
   m_cycle = 0;
 
   callback_t *trans_callback = 
-    new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_callback);
+    new Callback<core_c, void, Addr, bool, Counter, void*>(&(*this), &core_c::core_callback);
 
   m_simBase->register_callback(trans_callback);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_in_flight_reqs = 0;
 #endif
 }
@@ -99,7 +99,7 @@ void core_c::insert_request(Addr addr, bool write) {
 
 void core_c::run_a_cycle(bool pll_locked) {
   // if the pending_q is not empty insert one req into cxl every cycle
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   if (!m_pending_q.empty() && m_simBase->get_in_flight_reqs() < 100) {
 #else
   if (!m_pending_q.empty()) {
@@ -108,7 +108,7 @@ void core_c::run_a_cycle(bool pll_locked) {
     if(m_simBase->insert_request(req->m_addr, req->m_write, (void*)req)) {
       m_pending_q.pop_front();
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
       m_input_req_cnt[req->m_addr]++;
       m_input_insert_cycle[req->m_addr] = m_cycle;
       m_in_flight_reqs++;
@@ -120,7 +120,7 @@ void core_c::run_a_cycle(bool pll_locked) {
 
   m_cycle++;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   std::cout << m_cycle << ": " << m_in_flight_reqs << "/"
                               << m_simBase->get_in_flight_reqs() << std::endl;
   assert(m_in_flight_reqs == m_simBase->get_in_flight_reqs());
@@ -153,7 +153,7 @@ void core_c::run_sim() {
     run_a_cycle(false);
   }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   for (auto ent : m_input_req_cnt) {
     auto addr = ent.first;
     auto cnt = ent.second;
@@ -167,7 +167,7 @@ void core_c::run_sim() {
   std::cout << "Test passed" << std::endl;
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 void core_c::check_forward_progress() {
   auto period = m_simBase->m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue();
 
@@ -201,7 +201,7 @@ void core_c::check_forward_progress() {
 }
 #endif
 
-void core_c::core_callback(Addr addr, bool write, void *req) {
+void core_c::core_callback(Addr addr, bool write, Counter req_id, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== core callback =================================" << std::endl;
     std::cout << m_return_reqs << " " << addr << " " << write << " " << req << std::endl;
@@ -209,7 +209,7 @@ void core_c::core_callback(Addr addr, bool write, void *req) {
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   assert(addr == cur_req->m_addr);
   assert(write == cur_req->m_write);
   assert(--m_input_req_cnt[addr] >= 0);

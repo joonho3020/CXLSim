@@ -58,7 +58,7 @@ vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
   for (int ii = 0; ii < MAX_CHANNEL; ii++) {
     m_channel_cnt[ii] = 0;
   }
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_in_flight_reqs = 0;
 #endif
 }
@@ -508,7 +508,7 @@ void vc_buff_c::forward_progress_check() {
   }
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 Counter vc_buff_c::get_in_flight_reqs() {
   int sum = 0;
   for (int i = 0; i < MAX_CHANNEL; i++) sum += m_channel_cnt[i];

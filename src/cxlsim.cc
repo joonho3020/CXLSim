@@ -45,7 +45,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_knobs.h"
 #include "all_stats.h"
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 #include "pcie_vcbuff.h"
 #endif
 
@@ -72,6 +72,8 @@ int get_lcm(int a, int b) {
 // public
 ///////////////////////////////////////////////////////////////////////////////
 
+Counter cxlsim_c::m_req_id;
+
 cxlsim_c::cxlsim_c() {
   // simulation related
   m_cycle = 0;
@@ -90,7 +92,7 @@ cxlsim_c::cxlsim_c() {
   m_domain_next = new int[2];
   m_clock_internal = 0;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_in_flight_reqs = 0;
 #endif
 }
@@ -119,9 +121,9 @@ void cxlsim_c::register_callback(callback_t* fn) {
 }
 
 // accept request from the outside simulator
-bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
+Counter cxlsim_c::insert_request(Addr addr, bool write, void* req) {
   if (m_rc->rootcomplex_full()) {
-    return false;
+    return 0;
   } else {
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "==== Insert req to MXP"
@@ -130,12 +132,13 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
     }
 
     cxl_req_s* new_req = m_req_pool->acquire_entry(this);
+    new_req->m_id = ++m_req_id;
     new_req->m_addr = addr;
     new_req->m_write = write;
     new_req->m_req = req;
 
     m_rc->insert_request(new_req);
-    return true;
+    return m_req_id;
   }
 }
 
@@ -184,22 +187,7 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
       (m_cycle % m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue() == 0)) {
 
     std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
-    m_mxp->print_cxlt3_info();
-    m_rc->print_rc_info();
-
-#ifdef DEBUG
-    m_in_flight_reqs = m_rc->get_in_flight_reqs() + m_mxp->get_in_flight_reqs();
-    std::cout << "m_in_flight_reqs: " << m_in_flight_reqs << std::endl;
-
-    std::cout << "rc tot: " << m_rc->get_in_flight_reqs() << std::endl;
-    std::cout << "rc txvc: " << m_rc->m_txvc->get_in_flight_reqs() << std::endl;
-    std::cout << "rc rxvc: " << m_rc->m_rxvc->get_in_flight_reqs() << std::endl;
-
-    std::cout << "mxp tot: " << m_mxp->get_in_flight_reqs() << std::endl;
-    std::cout << "mxp txvc: " << m_mxp->m_txvc->get_in_flight_reqs() << std::endl;
-    std::cout << "mxp rxvc: " << m_mxp->m_rxvc->get_in_flight_reqs() << std::endl;
-#endif
-
+    print();
   }
 }
 
@@ -297,7 +285,7 @@ void cxlsim_c::request_done(cxl_req_s* req) {
                 << std::dec << "Write: " << req->m_write << " " << std::endl;
     }
 
-    (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
+    (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_id, req->m_req);
   }
 
   // release cxl request entry
@@ -305,7 +293,7 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   m_req_pool->release_entry(req);
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 Counter cxlsim_c::get_in_flight_reqs() {
   return m_mxp->get_in_flight_reqs() + m_rc->get_in_flight_reqs();
 }
@@ -314,6 +302,20 @@ Counter cxlsim_c::get_in_flight_reqs() {
 void cxlsim_c::print() {
   m_rc->print_rc_info();
   m_mxp->print_cxlt3_info();
+
+#ifdef CXL_DEBUG
+    m_in_flight_reqs = m_rc->get_in_flight_reqs() + m_mxp->get_in_flight_reqs();
+    std::cout << "m_in_flight_reqs: " << m_in_flight_reqs << std::endl;
+
+    std::cout << "rc tot: " << m_rc->get_in_flight_reqs() << std::endl;
+    std::cout << "rc txvc: " << m_rc->m_txvc->get_in_flight_reqs() << std::endl;
+    std::cout << "rc rxvc: " << m_rc->m_rxvc->get_in_flight_reqs() << std::endl;
+
+    std::cout << "mxp tot: " << m_mxp->get_in_flight_reqs() << std::endl;
+    std::cout << "mxp txvc: " << m_mxp->m_txvc->get_in_flight_reqs() << std::endl;
+    std::cout << "mxp rxvc: " << m_mxp->m_rxvc->get_in_flight_reqs() << std::endl;
+#endif
+
 }
 
 } // namespace CXL

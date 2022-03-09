@@ -130,7 +130,7 @@ private:
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 public:
   Counter m_in_flight_reqs;
   Counter get_in_flight_reqs();

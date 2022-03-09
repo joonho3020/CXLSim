@@ -73,9 +73,9 @@ public:
   void run_sim();
 
 private:
-  void core_callback(Addr addr, bool write, void *req);
+  void core_callback(Addr addr, bool write, Counter req_id, void *req);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   void check_forward_progress();
 #endif
 
@@ -92,7 +92,7 @@ private:
   std::string m_tracefilename;
   std::list<core_req_s*> m_pending_q;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   std::map<Addr, int> m_input_req_cnt;
   std::map<Addr, Counter> m_input_insert_cycle;
 

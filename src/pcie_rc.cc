@@ -49,7 +49,7 @@ pcie_rc_c::pcie_rc_c(cxlsim_c* simBase)
   : pcie_ep_c(simBase) {
   m_pending_size = *KNOB(KNOB_PCIE_INSERTQ_SIZE);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   m_in_flight_reqs = 0;
 #endif
 }
@@ -125,7 +125,7 @@ cxl_req_s* pcie_rc_c::pop_request() {
   }
 }
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
 Counter pcie_rc_c::get_in_flight_reqs() {
   Counter cnt = 0;
   for (auto flit : m_txreplay_buff) {

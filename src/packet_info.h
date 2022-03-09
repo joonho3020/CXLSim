@@ -167,7 +167,7 @@ typedef struct slot_s {
   void assign_type(void);
   void set_head(void);
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   int get_req_resp(void);
 #endif
 
@@ -203,7 +203,7 @@ typedef struct flit_s {
   Counter m_phys_done;
   Counter m_rxdll_done;
 
-#ifdef DEBUG
+#ifdef CXL_DEBUG
   int m_reqresp_cnt;
 
   int get_req_resp(void);

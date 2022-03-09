@@ -1,6 +1,6 @@
 # src/CMAKELists.txt
 
-add_definitions(-DDEBUG)
+add_definitions(-DCXL_DEBUG)
 
 SET(SOURCES
   main.cc
