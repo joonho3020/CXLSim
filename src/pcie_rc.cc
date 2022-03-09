@@ -40,12 +40,18 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "all_knobs.h"
 #include "pcie_rc.h"
+#include "pcie_endpoint.h"
+#include "pcie_vcbuff.h"
 
 namespace cxlsim {
 
 pcie_rc_c::pcie_rc_c(cxlsim_c* simBase) 
   : pcie_ep_c(simBase) {
   m_pending_size = *KNOB(KNOB_PCIE_INSERTQ_SIZE);
+
+#ifdef DEBUG
+  m_in_flight_reqs = 0;
+#endif
 }
 
 pcie_rc_c::~pcie_rc_c() {
@@ -119,6 +125,27 @@ cxl_req_s* pcie_rc_c::pop_request() {
   }
 }
 
+#ifdef DEBUG
+Counter pcie_rc_c::get_in_flight_reqs() {
+  Counter cnt = 0;
+  for (auto flit : m_txreplay_buff) {
+    if (flit->m_phys_sent) continue;
+
+    cnt += flit->get_req_resp();
+  }
+
+  for (auto flit : m_rxphys_q) {
+    cnt += flit->get_req_resp();
+  }
+
+  return m_in_flight_reqs = (Counter)m_pending_req.size() +
+                     (Counter)m_done_req.size() +
+                     (Counter)m_txvc->get_in_flight_reqs() +
+                     (Counter)m_rxvc->get_in_flight_reqs() +
+                     (Counter)cnt;
+}
+#endif
+
 void pcie_rc_c::print_rc_info() {
   std::cout << "-------------- Root Complex ------------------" << std::endl;
   print_ep_info();
@@ -130,7 +157,7 @@ void pcie_rc_c::print_rc_info() {
 
   std::cout << "done q" << ": ";
   for (auto req : m_done_req) {
-    std::cout << std::hex << req->m_addr << " ; ";
+    std::cout << req->m_addr << " ; ";
   }
   std::cout << std::endl;
 }

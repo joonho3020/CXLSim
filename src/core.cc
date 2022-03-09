@@ -65,11 +65,16 @@ core_c::core_c(cxlsim_c* simBase) {
   m_simBase = simBase;
   m_return_reqs = 0;
   m_insert_reqs = 0;
+  m_cycle = 0;
 
   callback_t *trans_callback = 
     new Callback<core_c, void, Addr, bool, void*>(&(*this), &core_c::core_callback);
 
   m_simBase->register_callback(trans_callback);
+
+#ifdef DEBUG
+  m_in_flight_reqs = 0;
+#endif
 }
 
 core_c::~core_c() {
@@ -94,14 +99,33 @@ void core_c::insert_request(Addr addr, bool write) {
 
 void core_c::run_a_cycle(bool pll_locked) {
   // if the pending_q is not empty insert one req into cxl every cycle
+#ifdef DEBUG
+  if (!m_pending_q.empty() && m_simBase->get_in_flight_reqs() < 100) {
+#else
   if (!m_pending_q.empty()) {
+#endif
     core_req_s* req = m_pending_q.front();
     if(m_simBase->insert_request(req->m_addr, req->m_write, (void*)req)) {
       m_pending_q.pop_front();
+
+#ifdef DEBUG
+      m_input_req_cnt[req->m_addr]++;
+      m_input_insert_cycle[req->m_addr] = m_cycle;
+      m_in_flight_reqs++;
+#endif
+
     }
   }
-
   m_simBase->run_a_cycle(pll_locked);
+
+  m_cycle++;
+
+#ifdef DEBUG
+  std::cout << m_cycle << ": " << m_in_flight_reqs << "/"
+                              << m_simBase->get_in_flight_reqs() << std::endl;
+  assert(m_in_flight_reqs == m_simBase->get_in_flight_reqs());
+  check_forward_progress();
+#endif
 }
 
 void core_c::run_sim() {
@@ -128,8 +152,54 @@ void core_c::run_sim() {
   while (m_return_reqs < tot_reqs) {
     run_a_cycle(false);
   }
-  std::cout << "Unit test success" << std::endl;
+
+#ifdef DEBUG
+  for (auto ent : m_input_req_cnt) {
+    auto addr = ent.first;
+    auto cnt = ent.second;
+    if (cnt != 0) {
+      std::cout << "Addr: " << addr 
+                << "Unreturned reqs: " <<  cnt << std::endl;
+    }
+  }
+#endif
+
+  std::cout << "Test passed" << std::endl;
 }
+
+#ifdef DEBUG
+void core_c::check_forward_progress() {
+  auto period = m_simBase->m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue();
+
+  if (m_cycle % period != 0) {
+    return;
+  }
+
+  for (auto ent : m_input_req_cnt) {
+    auto addr = ent.first;
+    auto cnt = ent.second;
+    if (cnt) {
+      std::cout << addr << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  for (auto ent : m_input_insert_cycle) {
+    auto addr = ent.first;
+
+    auto cnt = m_input_req_cnt[addr];
+    if (cnt == 0) continue;
+
+    auto in_cycle = ent.second;
+    if (m_cycle - in_cycle > period) {
+      std::cout << "Forward progress limit at Addr: " << addr
+                << " Insert cycle: " << in_cycle
+                << " Cur cycle: " << m_cycle << std::endl;
+      assert(0);
+    }
+  }
+}
+#endif
 
 void core_c::core_callback(Addr addr, bool write, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
@@ -138,8 +208,13 @@ void core_c::core_callback(Addr addr, bool write, void *req) {
   }
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
+
+#ifdef DEBUG
   assert(addr == cur_req->m_addr);
   assert(write == cur_req->m_write);
+  assert(--m_input_req_cnt[addr] >= 0);
+  assert(--m_in_flight_reqs >= 0);
+#endif
 
   m_return_reqs++;
   delete cur_req;

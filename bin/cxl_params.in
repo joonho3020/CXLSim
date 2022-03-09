@@ -43,6 +43,7 @@ ramulator_config_file DDR4-config.cfg
 # DEBUG
 debug_io_sys 0
 debug_callback 0
+forward_progress_period 10000
 
 # OUTPUT Redirect
 out ../stats

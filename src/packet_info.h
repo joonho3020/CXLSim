@@ -167,6 +167,10 @@ typedef struct slot_s {
   void assign_type(void);
   void set_head(void);
 
+#ifdef DEBUG
+  int get_req_resp(void);
+#endif
+
   int m_id;
   int m_bits;
   bool m_head;
@@ -198,6 +202,12 @@ typedef struct flit_s {
   Counter m_phys_start;
   Counter m_phys_done;
   Counter m_rxdll_done;
+
+#ifdef DEBUG
+  int m_reqresp_cnt;
+
+  int get_req_resp(void);
+#endif
 
   int m_msg_cnt[MAX_MSG_TYPES];
   std::list<slot_s*> m_slots;

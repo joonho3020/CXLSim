@@ -1,5 +1,7 @@
 # src/CMAKELists.txt
 
+add_definitions(-DDEBUG)
+
 SET(SOURCES
   main.cc
   core.cc

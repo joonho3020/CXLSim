@@ -58,6 +58,9 @@ vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
   for (int ii = 0; ii < MAX_CHANNEL; ii++) {
     m_channel_cnt[ii] = 0;
   }
+#ifdef DEBUG
+  m_in_flight_reqs = 0;
+#endif
 }
 
 void vc_buff_c::init(bool is_tx, bool is_master, 
@@ -159,11 +162,6 @@ void vc_buff_c::receive_flit(flit_s* flit) {
 
 void vc_buff_c::run_a_cycle() {
   m_cycle++;
-
-  uint64_t check_cycles = *KNOB(KNOB_FORWARD_PROGRESS_PERIOD);
-  if (m_cycle % check_cycles == 0) {
-    forward_progress_check();
-  }
 }
 
 void vc_buff_c::generate_flits() {
@@ -509,6 +507,20 @@ void vc_buff_c::forward_progress_check() {
     }
   }
 }
+
+#ifdef DEBUG
+Counter vc_buff_c::get_in_flight_reqs() {
+  int sum = 0;
+  for (int i = 0; i < MAX_CHANNEL; i++) sum += m_channel_cnt[i];
+  assert(sum == (int)m_msg_buff.size());
+
+  Counter cnt = 0;
+  for (auto flit : m_flit_buff) {
+    cnt += flit->get_req_resp();
+  }
+  return m_in_flight_reqs = (Counter)m_msg_buff.size() + cnt;
+}
+#endif
 
 void vc_buff_c::print() {
   for (auto msg : m_msg_buff) {

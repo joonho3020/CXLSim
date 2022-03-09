@@ -152,12 +152,12 @@ private:
   pool_c<slot_s>* m_slot_pool;
   pool_c<flit_s>* m_flit_pool; /**< flit pool */
 
+#ifdef DEBUG
+public:
+#endif
   int m_lanes; /**< PCIe lanes connected to endpoint */
   float m_perlane_bw; /**< PCIe per lane BW in GT/s */
   Counter m_prev_txphys_cycle; /**< finish cycle of previously sent packet */
-
-  vc_buff_c* m_txvc;
-  vc_buff_c* m_rxvc;
 
   int m_rxvc_bw; /**< VC buffer BW */
   int m_txreplay_cap; /**< replay buffer capacity */
@@ -166,6 +166,9 @@ private:
   int m_phys_cap; /**< maximum numbers of packets in physical layer q */
   std::list<flit_s*> m_rxphys_q; /**< physical layer receive queue */
   Counter m_phys_latency;
+
+  vc_buff_c* m_txvc;
+  vc_buff_c* m_rxvc;
 
 public:
   pcie_ep_c* m_peer_ep; /**< endpoint connected to this endpoint */

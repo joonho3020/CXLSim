@@ -13,3 +13,5 @@ bin/*.out
 **/*.swp
 stats
 libcxlsim.a
+src/cscope.*
+bin/*.log

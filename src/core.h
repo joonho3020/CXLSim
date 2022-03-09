@@ -38,6 +38,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define CORE_H
 
 #include <list>
+#include <map>
 #include <string>
 #include <fstream>
 
@@ -74,6 +75,10 @@ public:
 private:
   void core_callback(Addr addr, bool write, void *req);
 
+#ifdef DEBUG
+  void check_forward_progress();
+#endif
+
 public:
   // for debugging
   Counter m_insert_reqs;
@@ -81,10 +86,18 @@ public:
 
   // simbase
   cxlsim_c* m_simBase;
+  Counter m_cycle;
 
 private:
   std::string m_tracefilename;
   std::list<core_req_s*> m_pending_q;
+
+#ifdef DEBUG
+  std::map<Addr, int> m_input_req_cnt;
+  std::map<Addr, Counter> m_input_insert_cycle;
+
+  Counter m_in_flight_reqs;
+#endif
 };
 
 } //namespace CXL

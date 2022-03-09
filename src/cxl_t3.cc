@@ -37,8 +37,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <list>
 
+#include "pcie_endpoint.h"
 #include "cxl_t3.h"
 #include "pcie_rc.h"
+#include "pcie_vcbuff.h"
 #include "cxlsim.h"
 
 #include "all_knobs.h"
@@ -70,6 +72,10 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
 
   // init others
   m_cycle_internal = 0;
+
+#ifdef DEBUG
+  m_in_flight_reqs = 0;
+#endif
 }
 
 cxlt3_c::~cxlt3_c() {
@@ -95,6 +101,17 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   process_rxphys();
 
   m_cycle++;
+
+#ifdef DEBUG
+  Counter cnt = 0;
+  for (auto req_list : m_mxp_reads) {
+    cnt += (Counter)req_list.second.size();
+  }
+  for (auto req_list : m_mxp_writes) {
+    cnt += (Counter)req_list.second.size();
+  }
+  assert(cnt == m_mxp_requestsInFlight);
+#endif
 }
 
 void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
@@ -206,6 +223,28 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   m_mxp_resp_queue.push_back(req);
 }
 
+#ifdef DEBUG
+Counter cxlt3_c::get_in_flight_reqs() {
+  Counter cnt = 0;
+  for (auto flit : m_txreplay_buff) {
+    if (flit->m_phys_sent) continue;
+
+    cnt += flit->get_req_resp();
+  }
+
+  for (auto flit : m_rxphys_q) {
+    cnt += flit->get_req_resp();
+  }
+
+  return m_in_flight_reqs = (Counter)m_mxp_requestsInFlight +
+                     (Counter)m_mxp_resp_queue.size() +
+                     (Counter)m_pending_req->size() +
+                     (Counter)m_txvc->get_in_flight_reqs() +
+                     (Counter)m_rxvc->get_in_flight_reqs() +
+                     (Counter)cnt;
+}
+#endif
+
 // print for debugging
 void cxlt3_c::print_cxlt3_info() {
   std::cout << "-------------- mxp ------------------" << std::endl;
@@ -213,7 +252,7 @@ void cxlt3_c::print_cxlt3_info() {
 
   std::cout << "pending q" << ": ";
   for (auto req : *m_pending_req) {
-    std::cout << std::hex << req->m_addr << " ; ";
+    std::cout << req->m_addr << " ; ";
   }
 
   std::cout << m_mxp_requestsInFlight << std::endl;
@@ -222,7 +261,7 @@ void cxlt3_c::print_cxlt3_info() {
   for (auto iter : m_mxp_reads) {
     auto addr = iter.first;
     auto req_q = iter.second;
-    std::cout << "Addr: " << std::hex << addr << ": ";
+    std::cout << "Addr: " << addr << ": ";
     for (auto req : req_q)  {
       std::cout << req << "; ";
     }
@@ -233,7 +272,7 @@ void cxlt3_c::print_cxlt3_info() {
   for (auto iter : m_mxp_writes) {
     auto addr = iter.first;
     auto req_q = iter.second;
-    std::cout << "Addr: " << std::hex << addr << ": ";
+    std::cout << "Addr: " << addr << ": ";
     for (auto req : req_q)  {
       std::cout << req << "; ";
     }

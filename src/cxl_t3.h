@@ -129,6 +129,12 @@ private:
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */
+
+#ifdef DEBUG
+public:
+  Counter m_in_flight_reqs;
+  Counter get_in_flight_reqs();
+#endif
 };
 
 } //namespace ramulator

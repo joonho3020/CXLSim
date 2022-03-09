@@ -94,6 +94,13 @@ private:
   int m_pending_size; /**< size of pending queue */
   std::list<cxl_req_s*> m_pending_req; /**< requests pending */
   std::list<cxl_req_s*> m_done_req;    /**< requests finished */
+
+#ifdef DEBUG
+public:
+  Counter m_in_flight_reqs;
+
+  Counter get_in_flight_reqs();
+#endif
 };
 
 }

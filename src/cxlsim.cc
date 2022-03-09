@@ -45,6 +45,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_knobs.h"
 #include "all_stats.h"
 
+#ifdef DEBUG
+#include "pcie_vcbuff.h"
+#endif
+
 namespace cxlsim {
 
 #define GET_NEXT_CYCLE(domain)              \
@@ -85,6 +89,10 @@ cxlsim_c::cxlsim_c() {
   m_domain_count = new int[2];
   m_domain_next = new int[2];
   m_clock_internal = 0;
+
+#ifdef DEBUG
+  m_in_flight_reqs = 0;
+#endif
 }
 
 cxlsim_c::~cxlsim_c() {
@@ -117,7 +125,7 @@ bool cxlsim_c::insert_request(Addr addr, bool write, void* req) {
   } else {
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "==== Insert req to MXP"
-        << std::hex << " Addr: " << addr
+        << " Addr: " << addr
         << std::dec << " write: " << write << std::endl;
     }
 
@@ -174,9 +182,24 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   // print messages for debugging
   if (m_knobs->KNOB_DEBUG_IO_SYS->getValue() ||
       (m_cycle % m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue() == 0)) {
+
     std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
     m_mxp->print_cxlt3_info();
     m_rc->print_rc_info();
+
+#ifdef DEBUG
+    m_in_flight_reqs = m_rc->get_in_flight_reqs() + m_mxp->get_in_flight_reqs();
+    std::cout << "m_in_flight_reqs: " << m_in_flight_reqs << std::endl;
+
+    std::cout << "rc tot: " << m_rc->get_in_flight_reqs() << std::endl;
+    std::cout << "rc txvc: " << m_rc->m_txvc->get_in_flight_reqs() << std::endl;
+    std::cout << "rc rxvc: " << m_rc->m_rxvc->get_in_flight_reqs() << std::endl;
+
+    std::cout << "mxp tot: " << m_mxp->get_in_flight_reqs() << std::endl;
+    std::cout << "mxp txvc: " << m_mxp->m_txvc->get_in_flight_reqs() << std::endl;
+    std::cout << "mxp rxvc: " << m_mxp->m_rxvc->get_in_flight_reqs() << std::endl;
+#endif
+
   }
 }
 
@@ -270,9 +293,10 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   if (m_trans_done_cb) {
     if (m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
       std::cout << "CXL Req Done: "
-                << std::hex << "Addr: " << req->m_addr << " " 
+                << "Addr: " << req->m_addr << " " 
                 << std::dec << "Write: " << req->m_write << " " << std::endl;
     }
+
     (*m_trans_done_cb)(req->m_addr, req->m_write, req->m_req);
   }
 
@@ -280,6 +304,12 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   req->init();
   m_req_pool->release_entry(req);
 }
+
+#ifdef DEBUG
+Counter cxlsim_c::get_in_flight_reqs() {
+  return m_mxp->get_in_flight_reqs() + m_rc->get_in_flight_reqs();
+}
+#endif
 
 void cxlsim_c::print() {
   m_rc->print_rc_info();
