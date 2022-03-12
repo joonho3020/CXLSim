@@ -41,10 +41,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "cxlsim.h"
 #include "core.h"
 
-#ifdef CXL_DEBUG
-#include "cxl_t3.h"
-#endif
-
 namespace cxlsim {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,10 +72,6 @@ core_c::core_c(cxlsim_c* simBase) {
                 (&(*this), &core_c::core_callback);
 
   m_simBase->register_callback(trans_callback);
-
-#ifdef CXL_DEBUG
-  m_in_flight_reqs = 0;
-#endif
 }
 
 core_c::~core_c() {
@@ -110,39 +102,18 @@ void core_c::run_a_cycle(bool pll_locked) {
     auto req = ent.first;
     auto cycle = ent.second;
 
-#ifdef CXL_DEBUG
-    if (cycle > m_cycle && m_simBase->get_in_flight_reqs() == 0) {
-      assert(m_in_flight_reqs == 0);
-      m_simBase->fast_forward(cycle - m_cycle);
-      m_cycle = cycle;
-    }
-#endif
-
     if (cycle == m_cycle) {
-
       Counter req_id = 
         m_simBase->insert_request(req->m_addr, req->m_write, (void*)req);
 
       if (req_id != 0) {
         m_pending_q.pop_front();
-
-#ifdef CXL_DEBUG
-        m_in_flight_reqs++;
-        m_in_flight_reqs_id[req_id] += 1;
-#endif
       }
     }
   }
 
   m_simBase->run_a_cycle(pll_locked);
   m_cycle++;
-
-#ifdef CXL_DEBUG
-/* std::cout << m_cycle << ": " << m_in_flight_reqs << "/" */
-/* << m_simBase->get_in_flight_reqs() << std::endl; */
-/* assert(m_in_flight_reqs == m_simBase->get_in_flight_reqs()); */
-  check_forward_progress();
-#endif
 }
 
 void core_c::run_sim() {
@@ -173,27 +144,6 @@ void core_c::run_sim() {
   std::cout << "Simulation ended" << std::endl;
 }
 
-#ifdef CXL_DEBUG
-void core_c::check_forward_progress() {
-  auto period = m_simBase->m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue();
-
-  if (m_cycle % period != 0) {
-    return;
-  }
-
-  if (m_simBase->m_mxp->check_ramulator_progress()) {
-    std::cout << "Current cycle: " << m_cycle << std::endl;
-    m_simBase->print();
-
-    std::cout << "In flight requests not returned" << std::endl;
-    for (auto x : m_in_flight_reqs_id) {
-      if (x.second) std::cout << x.first << std::endl;
-    }
-    assert(0);
-  }
-}
-#endif
-
 void core_c::core_callback(Addr addr, bool write, Counter req_id, void *req) {
   if (m_simBase->m_knobs->KNOB_DEBUG_CALLBACK->getValue()) {
     std::cout << "======================== core callback =================================" << std::endl;
@@ -201,14 +151,6 @@ void core_c::core_callback(Addr addr, bool write, Counter req_id, void *req) {
   }
 
   core_req_s* cur_req = static_cast<core_req_s*>(req);
-
-#ifdef CXL_DEBUG
-  assert(addr == cur_req->m_addr);
-  assert(write == cur_req->m_write);
-  assert(--m_in_flight_reqs >= 0);
-  m_in_flight_reqs_id[req_id]--;
-#endif
-
   m_return_reqs++;
   delete cur_req;
 }

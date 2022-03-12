@@ -57,10 +57,6 @@ void cxl_req_s::init(void) {
   m_addr = 0;
   m_write = false;
   m_req = NULL;
-
-#ifdef CXL_DEBUG
-  m_dram_insert_cycle = 0;
-#endif
 }
 
 void cxl_req_s::print(void) {
@@ -194,13 +190,6 @@ void slot_s::set_head(void) {
   m_head = true;
 }
 
-#ifdef CXL_DEBUG
-int slot_s::get_req_resp(void) {
-  return m_msg_cnt[M2S_REQ] + m_msg_cnt[M2S_RWD] +
-         m_msg_cnt[S2M_NDR] + m_msg_cnt[S2M_DRS];
-}
-#endif
-
 void slot_s::print(void) {
   std::cout << "{" << slot_type_str[m_type] << " ";
   for (auto msg : m_msgs) {
@@ -229,10 +218,6 @@ void flit_s::init(void) {
   m_phys_done = 0;
   m_rxdll_done = 0;
 
-#ifdef CXL_DEBUG
-  m_reqresp_cnt = 0;
-#endif
-
   for (int ii = 0; ii < MAX_MSG_TYPES; ii++) {
     m_msg_cnt[ii] = 0;
   }
@@ -250,24 +235,7 @@ void flit_s::push_back(slot_s* slot) {
     m_msg_cnt[ii] += slot->m_msg_cnt[ii];
   }
   m_slots.push_back(slot);
-
-#ifdef CXL_DEBUG
-  m_reqresp_cnt += slot->get_req_resp();
-#endif
 }
-
-#ifdef CXL_DEBUG
-int flit_s::get_req_resp() {
-  int sum = 0;
-  for (auto slot : m_slots) {
-    sum += slot->m_msg_cnt[M2S_REQ] + slot->m_msg_cnt[M2S_RWD]
-          + slot->m_msg_cnt[S2M_DRS] + slot->m_msg_cnt[S2M_NDR];
-  }
-  assert(sum == m_reqresp_cnt);
-
-  return m_reqresp_cnt;
-}
-#endif
 
 void flit_s::push_front(slot_s* slot) {
   m_bits += slot->m_bits;
@@ -275,10 +243,6 @@ void flit_s::push_front(slot_s* slot) {
     m_msg_cnt[ii] += slot->m_msg_cnt[ii];
   }
   m_slots.push_front(slot);
-
-#ifdef CXL_DEBUG
-  m_reqresp_cnt += slot->get_req_resp();
-#endif
 }
 
 bool flit_s::rollover(void) {

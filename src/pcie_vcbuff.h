@@ -115,13 +115,6 @@ private:
 
   Counter m_cycle;
   cxlsim_c* m_simBase;
-
-#ifdef CXL_DEBUG
-public:
-  Counter m_in_flight_reqs;
-  Counter get_in_flight_reqs();
-  void fast_forward(Counter cycle);
-#endif
 };
 
 } // namespace CXL

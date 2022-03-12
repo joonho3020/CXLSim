@@ -146,13 +146,6 @@ private:
   int *m_domain_count;
   int *m_domain_next;
   int m_clock_internal; /**<< internal clock of simulator */
-
-#ifdef CXL_DEBUG
-public:
-  Counter m_in_flight_reqs;
-  Counter get_in_flight_reqs();
-  void fast_forward(Counter cycle);
-#endif
 };
 
 }

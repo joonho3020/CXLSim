@@ -72,10 +72,6 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
 
   // init others
   m_cycle_internal = 0;
-
-#ifdef CXL_DEBUG
-  m_in_flight_reqs = 0;
-#endif
 }
 
 cxlt3_c::~cxlt3_c() {
@@ -169,26 +165,13 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 
   if (accepted) {
     if (is_write) {
-#ifdef CXL_DEBUG
-      assert(m_mxp_writes.find(req->m_id) == m_mxp_writes.end());
-#endif
       m_mxp_writes[ramu_req.reqid] = req;
     } else {
-#ifdef CXL_DEBUG
-      assert(m_mxp_reads.find(req->m_id) == m_mxp_reads.end());
-#endif
       m_mxp_reads[ramu_req.reqid] = req;
     }
-
-#ifdef CXL_DEBUG
-      req->m_dram_insert_cycle = m_cycle;
-#endif
-
     ++m_mxp_requestsInFlight;
-    return true;
-  } else {
-    return false;
   }
+  return accepted;
 }
 
 // ramulator read callback
@@ -225,47 +208,6 @@ void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   m_mxp_resp_queue.push_back(cxl_req);
 }
 
-#ifdef CXL_DEBUG
-Counter cxlt3_c::get_in_flight_reqs() {
-  Counter cnt = 0;
-  for (auto flit : m_txreplay_buff) {
-    if (flit->m_phys_sent) continue;
-
-    cnt += flit->get_req_resp();
-  }
-
-  for (auto flit : m_rxphys_q) {
-    cnt += flit->get_req_resp();
-  }
-
-  return m_in_flight_reqs = (Counter)m_mxp_requestsInFlight +
-                     (Counter)m_mxp_resp_queue.size() +
-                     (Counter)m_pending_req->size() +
-                     (Counter)m_txvc->get_in_flight_reqs() +
-                     (Counter)m_rxvc->get_in_flight_reqs() +
-                     (Counter)cnt;
-}
-
-bool cxlt3_c::check_ramulator_progress() {
-  bool ret = false;
-
-  for (auto x : m_mxp_reads) {
-    auto req = x.second;
-    if (m_cycle - req->m_dram_insert_cycle > 
-        *KNOB(KNOB_FORWARD_PROGRESS_PERIOD))
-      ret = true;
-  }
-
-  for (auto x : m_mxp_writes) {
-    auto req = x.second;
-    if (m_cycle - req->m_dram_insert_cycle > 
-        *KNOB(KNOB_FORWARD_PROGRESS_PERIOD))
-      ret = true;
-  }
-  return ret;
-}
-#endif
-
 // print for debugging
 void cxlt3_c::print_cxlt3_info() {
   std::cout << "-------------- mxp ------------------" << std::endl;
@@ -282,9 +224,6 @@ void cxlt3_c::print_cxlt3_info() {
   for (auto x : m_mxp_reads) {
     auto req = x.second;
     std::cout << "Addr: " << req->m_addr << ": " << req->m_id << ": ";
-#ifdef CXL_DEBUG
-    std::cout << req->m_dram_insert_cycle;
-#endif
     std::cout << std::endl;
   }
 
@@ -293,9 +232,6 @@ void cxlt3_c::print_cxlt3_info() {
     auto req = x.second;
     std::cout << "Addr: " << req->m_addr << ": ";
     std::cout << req->m_id << "; ";
-#ifdef CXL_DEBUG
-    std::cout << req->m_dram_insert_cycle;
-#endif
     std::cout << std::endl;
   }
   std::cout << std::endl;

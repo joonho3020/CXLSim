@@ -75,10 +75,6 @@ public:
 private:
   void core_callback(Addr addr, bool write, Counter req_id, void *req);
 
-#ifdef CXL_DEBUG
-  void check_forward_progress();
-#endif
-
 public:
   // for debugging
   Counter m_insert_reqs;
@@ -91,11 +87,6 @@ public:
 private:
   std::string m_tracefilename;
   std::list<std::pair<core_req_s*, Counter>> m_pending_q;
-
-#ifdef CXL_DEBUG
-  Counter m_in_flight_reqs;
-  std::map<Counter, int> m_in_flight_reqs_id;
-#endif
 };
 
 } //namespace CXL

@@ -396,12 +396,4 @@ void pcie_ep_c::print_ep_info() {
   std::cout << std::endl;
 }
 
-#ifdef CXL_DEBUG
-void pcie_ep_c::fast_forward(Counter cycle) {
-  m_txvc->fast_forward(cycle);
-  m_rxvc->fast_forward(cycle);
-  m_cycle += cycle;
-}
-#endif
-
 } // namespace CXL

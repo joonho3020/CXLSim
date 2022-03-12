@@ -58,9 +58,6 @@ vc_buff_c::vc_buff_c(cxlsim_c* simBase) {
   for (int ii = 0; ii < MAX_CHANNEL; ii++) {
     m_channel_cnt[ii] = 0;
   }
-#ifdef CXL_DEBUG
-  m_in_flight_reqs = 0;
-#endif
 }
 
 void vc_buff_c::init(bool is_tx, bool is_master, 
@@ -507,24 +504,6 @@ void vc_buff_c::forward_progress_check() {
     }
   }
 }
-
-#ifdef CXL_DEBUG
-Counter vc_buff_c::get_in_flight_reqs() {
-  int sum = 0;
-  for (int i = 0; i < MAX_CHANNEL; i++) sum += m_channel_cnt[i];
-  assert(sum == (int)m_msg_buff.size());
-
-  Counter cnt = 0;
-  for (auto flit : m_flit_buff) {
-    cnt += flit->get_req_resp();
-  }
-  return m_in_flight_reqs = (Counter)m_msg_buff.size() + cnt;
-}
-
-void vc_buff_c::fast_forward(Counter cycle) {
-  m_cycle += cycle;
-}
-#endif
 
 void vc_buff_c::print() {
   for (auto msg : m_msg_buff) {

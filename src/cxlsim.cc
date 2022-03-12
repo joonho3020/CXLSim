@@ -45,10 +45,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "all_knobs.h"
 #include "all_stats.h"
 
-#ifdef CXL_DEBUG
-#include "pcie_vcbuff.h"
-#endif
-
 namespace cxlsim {
 
 #define GET_NEXT_CYCLE(domain)              \
@@ -91,10 +87,6 @@ cxlsim_c::cxlsim_c() {
   m_domain_count = new int[2];
   m_domain_next = new int[2];
   m_clock_internal = 0;
-
-#ifdef CXL_DEBUG
-  m_in_flight_reqs = 0;
-#endif
 }
 
 cxlsim_c::~cxlsim_c() {
@@ -150,9 +142,6 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   m_rc->run_a_cycle(pll_locked);
   GET_NEXT_CYCLE(CLOCK_IO);
 
-/* #ifdef CXL_DEBUG */
-/* m_mxp->run_a_cycle_internal(pll_locked); */
-/* #else */
   // run dram inside the memory expander
   // - should run only when the timing is correct
   while (m_clock_internal <= m_domain_next[CLOCK_CXLRAM] &&
@@ -297,35 +286,9 @@ void cxlsim_c::request_done(cxl_req_s* req) {
   m_req_pool->release_entry(req);
 }
 
-#ifdef CXL_DEBUG
-Counter cxlsim_c::get_in_flight_reqs() {
-  return m_mxp->get_in_flight_reqs() + m_rc->get_in_flight_reqs();
-}
-
-void cxlsim_c::fast_forward(Counter cycle) {
-  m_mxp->fast_forward(cycle);
-  m_rc->fast_forward(cycle);
-  m_cycle += cycle;
-}
-#endif
-
 void cxlsim_c::print() {
   m_rc->print_rc_info();
   m_mxp->print_cxlt3_info();
-
-#ifdef CXL_DEBUG
-    m_in_flight_reqs = m_rc->get_in_flight_reqs() + m_mxp->get_in_flight_reqs();
-    std::cout << "m_in_flight_reqs: " << m_in_flight_reqs << std::endl;
-
-    std::cout << "rc tot: " << m_rc->get_in_flight_reqs() << std::endl;
-    std::cout << "rc txvc: " << m_rc->m_txvc->get_in_flight_reqs() << std::endl;
-    std::cout << "rc rxvc: " << m_rc->m_rxvc->get_in_flight_reqs() << std::endl;
-
-    std::cout << "mxp tot: " << m_mxp->get_in_flight_reqs() << std::endl;
-    std::cout << "mxp txvc: " << m_mxp->m_txvc->get_in_flight_reqs() << std::endl;
-    std::cout << "mxp rxvc: " << m_mxp->m_rxvc->get_in_flight_reqs() << std::endl;
-#endif
-
 }
 
 } // namespace CXL

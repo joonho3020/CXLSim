@@ -152,9 +152,6 @@ private:
   pool_c<slot_s>* m_slot_pool;
   pool_c<flit_s>* m_flit_pool; /**< flit pool */
 
-#ifdef CXL_DEBUG
-public:
-#endif
   int m_lanes; /**< PCIe lanes connected to endpoint */
   float m_perlane_bw; /**< PCIe per lane BW in GT/s */
   Counter m_prev_txphys_cycle; /**< finish cycle of previously sent packet */
@@ -174,10 +171,6 @@ public:
   pcie_ep_c* m_peer_ep; /**< endpoint connected to this endpoint */
   cxlsim_c* m_simBase; /**< simulation base */
   Counter m_cycle; /**< PCIe clock cycle */
-
-#ifdef CXL_DEBUG
-  void fast_forward(Counter cycle);
-#endif
 };
 
 } // namespace CXL

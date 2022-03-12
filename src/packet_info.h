@@ -71,10 +71,6 @@ typedef struct cxl_req_s {
   bool m_write;
   void* m_req;
   cxlsim_c* m_simBase;
-
-#ifdef CXL_DEBUG
-  Counter m_dram_insert_cycle = 0;
-#endif
 } cxl_req_s;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -171,10 +167,6 @@ typedef struct slot_s {
   void assign_type(void);
   void set_head(void);
 
-#ifdef CXL_DEBUG
-  int get_req_resp(void);
-#endif
-
   int m_id;
   int m_bits;
   bool m_head;
@@ -206,12 +198,6 @@ typedef struct flit_s {
   Counter m_phys_start;
   Counter m_phys_done;
   Counter m_rxdll_done;
-
-#ifdef CXL_DEBUG
-  int m_reqresp_cnt;
-
-  int get_req_resp(void);
-#endif
 
   int m_msg_cnt[MAX_MSG_TYPES];
   std::list<slot_s*> m_slots;
