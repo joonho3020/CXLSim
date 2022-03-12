@@ -37,8 +37,8 @@ param<PCIE_PER_LANE_BW, pcie_per_lane_bw, float, 32>
 param<PCIE_TXVC_CAPACITY, pcie_txvc_capacity, int, 8>
 param<PCIE_RXVC_CAPACITY, pcie_rxvc_capacity, int, 8>
 
-param<PCIE_TXFLITBUFF_CAPACITY, pcie_txflitbuff_capacity, int, 32>
-param<PCIE_RXFLITBUFF_CAPACITY, pcie_rxflitbuff_capacity, int, 32>
+param<PCIE_TXFLITBUFF_CAPACITY, pcie_txflitbuff_capacity, int, 8>
+param<PCIE_RXFLITBUFF_CAPACITY, pcie_rxflitbuff_capacity, int, 8>
 
 param<PCIE_RXVC_BW, pcie_rxvc_bw, int, 4>
 param<PCIE_TXVC_BW, pcie_txvc_bw, int, 4>
@@ -64,6 +64,9 @@ param<PCIE_REQ_MSG_BITS, pcie_req_msg_bits, int, 87>
 param<PCIE_RWD_MSG_BITS, pcie_rwd_msg_bits, int, 87>
 param<PCIE_NDR_MSG_BITS, pcie_ndr_msg_bits, int, 30>
 param<PCIE_DRS_MSG_BITS, pcie_drs_msg_bits, int, 40>
+
+/* MXP */
+param<MXP_RAMU_PEND_CAP, ramu_pendq_capacity, int, 8>
 
 /* Output dir */
 param<STATISTICS_OUT_DIRECTORY, out, std::string, .>

@@ -126,6 +126,7 @@ private:
   std::function<void(ramulator::Request &)> m_read_cb_func;
   std::function<void(ramulator::Request &)> m_write_cb_func;
 
+  int m_pending_cap;
   std::list<cxl_req_s*>* m_pending_req; /**< mem reqs pending */
 
   Counter m_cycle_internal; /**< internal cycle for DRAM */

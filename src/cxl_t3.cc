@@ -60,6 +60,7 @@ cxlt3_c::cxlt3_c(cxlsim_c* simBase)
                             std::placeholders::_1)) {
   // init queues
   m_pending_req = new list<cxl_req_s*>();
+  m_pending_cap = *KNOB(KNOB_MXP_RAMU_PEND_CAP);
 
   // init ramulator
   std::string config_file(*KNOB(KNOB_RAMULATOR_CONFIG_FILE));
@@ -128,9 +129,9 @@ void cxlt3_c::start_transaction() {
 // transactions ends in the viewpoint of RC
 // read messages from the rx vc & insert them into the dram pending queue
 void cxlt3_c::end_transaction() {
-  while (1) {
+  while (m_pending_cap > (int)m_pending_req->size()) {
     cxl_req_s* req = pull_rxvc();
-    if (!req) {
+    if (req == NULL) {
       break;
     } else {
       m_pending_req->push_back(req);
