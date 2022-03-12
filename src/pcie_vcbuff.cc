@@ -520,6 +520,10 @@ Counter vc_buff_c::get_in_flight_reqs() {
   }
   return m_in_flight_reqs = (Counter)m_msg_buff.size() + cnt;
 }
+
+void vc_buff_c::fast_forward(Counter cycle) {
+  m_cycle += cycle;
+}
 #endif
 
 void vc_buff_c::print() {

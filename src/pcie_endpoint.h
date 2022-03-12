@@ -174,6 +174,10 @@ public:
   pcie_ep_c* m_peer_ep; /**< endpoint connected to this endpoint */
   cxlsim_c* m_simBase; /**< simulation base */
   Counter m_cycle; /**< PCIe clock cycle */
+
+#ifdef CXL_DEBUG
+  void fast_forward(Counter cycle);
+#endif
 };
 
 } // namespace CXL

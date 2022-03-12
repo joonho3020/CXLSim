@@ -116,8 +116,8 @@ private:
 private:
   // mxp queues
   unsigned int m_mxp_requestsInFlight;
-  std::map<long, std::list<cxl_req_s*>> m_mxp_reads;
-  std::map<long, std::list<cxl_req_s*>> m_mxp_writes;
+  std::map<Counter, cxl_req_s*> m_mxp_reads;
+  std::map<Counter, cxl_req_s*> m_mxp_writes;
   std::list<cxl_req_s*> m_mxp_resp_queue;
 
   // members for ramulator
@@ -134,6 +134,7 @@ private:
 public:
   Counter m_in_flight_reqs;
   Counter get_in_flight_reqs();
+  bool check_ramulator_progress();
 #endif
 };
 

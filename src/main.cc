@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   cxlsim::core_c* my_core = new cxlsim::core_c(simBase);
 
   // run simulation
-  my_core->set_tracefile("../trace/sample.txt");
+  my_core->set_tracefile("../trace/debug-origin.txt");
   my_core->run_sim();
 
   // dump stats

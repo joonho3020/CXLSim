@@ -150,11 +150,8 @@ private:
 #ifdef CXL_DEBUG
 public:
   Counter m_in_flight_reqs;
-#endif
-
-public:
-#ifdef CXL_DEBUG
   Counter get_in_flight_reqs();
+  void fast_forward(Counter cycle);
 #endif
 };
 

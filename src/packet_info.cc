@@ -57,6 +57,10 @@ void cxl_req_s::init(void) {
   m_addr = 0;
   m_write = false;
   m_req = NULL;
+
+#ifdef CXL_DEBUG
+  m_dram_insert_cycle = 0;
+#endif
 }
 
 void cxl_req_s::print(void) {

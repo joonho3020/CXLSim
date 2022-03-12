@@ -120,6 +120,7 @@ private:
 public:
   Counter m_in_flight_reqs;
   Counter get_in_flight_reqs();
+  void fast_forward(Counter cycle);
 #endif
 };
 

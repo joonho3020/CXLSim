@@ -71,6 +71,10 @@ typedef struct cxl_req_s {
   bool m_write;
   void* m_req;
   cxlsim_c* m_simBase;
+
+#ifdef CXL_DEBUG
+  Counter m_dram_insert_cycle = 0;
+#endif
 } cxl_req_s;
 
 //////////////////////////////////////////////////////////////////////////////

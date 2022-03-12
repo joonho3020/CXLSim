@@ -101,17 +101,6 @@ void cxlt3_c::run_a_cycle(bool pll_locked) {
   process_rxphys();
 
   m_cycle++;
-
-#ifdef CXL_DEBUG
-  Counter cnt = 0;
-  for (auto req_list : m_mxp_reads) {
-    cnt += (Counter)req_list.second.size();
-  }
-  for (auto req_list : m_mxp_writes) {
-    cnt += (Counter)req_list.second.size();
-  }
-  assert(cnt == m_mxp_requestsInFlight);
-#endif
 }
 
 void cxlt3_c::run_a_cycle_internal(bool pll_locked) {
@@ -175,16 +164,25 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
   auto cb_func = (is_write) ? m_write_cb_func : m_read_cb_func;
   long addr = static_cast<long>(req->m_addr);
 
-  ramulator::Request ramu_req(addr, req_type, cb_func, 0);
+  ramulator::Request ramu_req(addr, req_type, cb_func, req->m_id,0);
   bool accepted = m_ramu_wrapper->send(ramu_req);
 
   if (accepted) {
     if (is_write) {
-      // FIXME : fix this it req->m_id
-      m_mxp_writes[ramu_req.addr].push_back(req);
+#ifdef CXL_DEBUG
+      assert(m_mxp_writes.find(req->m_id) == m_mxp_writes.end());
+#endif
+      m_mxp_writes[ramu_req.reqid] = req;
     } else {
-      m_mxp_reads[ramu_req.addr].push_back(req);
+#ifdef CXL_DEBUG
+      assert(m_mxp_reads.find(req->m_id) == m_mxp_reads.end());
+#endif
+      m_mxp_reads[ramu_req.reqid] = req;
     }
+
+#ifdef CXL_DEBUG
+      req->m_dram_insert_cycle = m_cycle;
+#endif
 
     ++m_mxp_requestsInFlight;
     return true;
@@ -196,31 +194,35 @@ bool cxlt3_c::push_ramu_req(cxl_req_s* req) {
 // ramulator read callback
 void cxlt3_c::readComplete(ramulator::Request &ramu_req) {
   if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-    printf("CXL RAM read callback done: 0x%lx\n", ramu_req.addr);
+    printf("CXL RAM read callback done: 0x%lu\n", ramu_req.reqid);
   }
 
-  auto &req_q = m_mxp_reads.find(ramu_req.addr)->second;
-  cxl_req_s *req = req_q.front();
-  req_q.pop_front();
-  if (!req_q.size()) m_mxp_reads.erase(ramu_req.addr);
+  assert(m_mxp_reads.find(ramu_req.reqid) != m_mxp_reads.end());
+
+  auto &cxl_req = m_mxp_reads[ramu_req.reqid];
+  m_mxp_reads.erase(ramu_req.reqid);
+
+  assert(ramu_req.reqid == cxl_req->m_id);
 
   --m_mxp_requestsInFlight;
-  m_mxp_resp_queue.push_back(req);
+  m_mxp_resp_queue.push_back(cxl_req);
 }
 
 // ramulator write callback
 void cxlt3_c::writeComplete(ramulator::Request &ramu_req) {
   if (*KNOB(KNOB_DEBUG_CALLBACK)) {
-    printf("CXL RAM write callback done: 0x%lx\n", ramu_req.addr);
+    printf("CXL RAM write callback done: 0x%lu\n", ramu_req.reqid);
   }
 
-  auto &req_q = m_mxp_writes.find(ramu_req.addr)->second;
-  cxl_req_s *req = req_q.front();
-  req_q.pop_front();
-  if (!req_q.size()) m_mxp_writes.erase(ramu_req.addr);
+  assert(m_mxp_writes.find(ramu_req.reqid) != m_mxp_writes.end());
+
+  cxl_req_s *cxl_req = m_mxp_writes[ramu_req.reqid];
+  m_mxp_writes.erase(ramu_req.reqid);
+
+  assert(ramu_req.reqid == cxl_req->m_id);
 
   --m_mxp_requestsInFlight;
-  m_mxp_resp_queue.push_back(req);
+  m_mxp_resp_queue.push_back(cxl_req);
 }
 
 #ifdef CXL_DEBUG
@@ -243,6 +245,25 @@ Counter cxlt3_c::get_in_flight_reqs() {
                      (Counter)m_rxvc->get_in_flight_reqs() +
                      (Counter)cnt;
 }
+
+bool cxlt3_c::check_ramulator_progress() {
+  bool ret = false;
+
+  for (auto x : m_mxp_reads) {
+    auto req = x.second;
+    if (m_cycle - req->m_dram_insert_cycle > 
+        *KNOB(KNOB_FORWARD_PROGRESS_PERIOD))
+      ret = true;
+  }
+
+  for (auto x : m_mxp_writes) {
+    auto req = x.second;
+    if (m_cycle - req->m_dram_insert_cycle > 
+        *KNOB(KNOB_FORWARD_PROGRESS_PERIOD))
+      ret = true;
+  }
+  return ret;
+}
 #endif
 
 // print for debugging
@@ -258,31 +279,25 @@ void cxlt3_c::print_cxlt3_info() {
   std::cout << m_mxp_requestsInFlight << std::endl;
 
   std::cout << "Read q" << std::endl;
-  for (auto iter : m_mxp_reads) {
-    auto addr = iter.first;
-    auto req_q = iter.second;
-    std::cout << "Addr: " << addr << ": ";
-    for (auto req : req_q)  {
-      std::cout << req << "; ";
-    }
+  for (auto x : m_mxp_reads) {
+    auto req = x.second;
+    std::cout << "Addr: " << req->m_addr << ": " << req->m_id << ": ";
+#ifdef CXL_DEBUG
+    std::cout << req->m_dram_insert_cycle;
+#endif
     std::cout << std::endl;
   }
 
   std::cout << "Write q" << std::endl;
-  for (auto iter : m_mxp_writes) {
-    auto addr = iter.first;
-    auto req_q = iter.second;
-    std::cout << "Addr: " << addr << ": ";
-    for (auto req : req_q)  {
-      std::cout << req << "; ";
-    }
+  for (auto x : m_mxp_writes) {
+    auto req = x.second;
+    std::cout << "Addr: " << req->m_addr << ": ";
+    std::cout << req->m_id << "; ";
+#ifdef CXL_DEBUG
+    std::cout << req->m_dram_insert_cycle;
+#endif
     std::cout << std::endl;
   }
-
-/* for (auto iter : *m_pending_req) { */
-/* auto addr = iter->m_addr; */
-/* std::cout << "Addr: " << std::hex << addr << ": "; */
-/* } */
   std::cout << std::endl;
 }
 

@@ -150,6 +150,9 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   m_rc->run_a_cycle(pll_locked);
   GET_NEXT_CYCLE(CLOCK_IO);
 
+/* #ifdef CXL_DEBUG */
+/* m_mxp->run_a_cycle_internal(pll_locked); */
+/* #else */
   // run dram inside the memory expander
   // - should run only when the timing is correct
   while (m_clock_internal <= m_domain_next[CLOCK_CXLRAM] &&
@@ -157,6 +160,7 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
     m_mxp->run_a_cycle_internal(pll_locked);
     GET_NEXT_CYCLE(CLOCK_CXLRAM);
   }
+/* #endif */
 
   // pull finished requests from the root complex
   while (1) {
@@ -183,9 +187,9 @@ void cxlsim_c::run_a_cycle(bool pll_locked) {
   }
 
   // print messages for debugging
-  if (m_knobs->KNOB_DEBUG_IO_SYS->getValue() ||
-      (m_cycle % m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue() == 0)) {
-
+/* if (m_knobs->KNOB_DEBUG_IO_SYS->getValue() || */
+/* (m_cycle % m_knobs->KNOB_FORWARD_PROGRESS_PERIOD->getValue() == 0)) { */
+  if (m_knobs->KNOB_DEBUG_IO_SYS->getValue()) {
     std::cout << std::endl << "io cycle : " << std::dec << m_cycle << std::endl;
     print();
   }
@@ -296,6 +300,12 @@ void cxlsim_c::request_done(cxl_req_s* req) {
 #ifdef CXL_DEBUG
 Counter cxlsim_c::get_in_flight_reqs() {
   return m_mxp->get_in_flight_reqs() + m_rc->get_in_flight_reqs();
+}
+
+void cxlsim_c::fast_forward(Counter cycle) {
+  m_mxp->fast_forward(cycle);
+  m_rc->fast_forward(cycle);
+  m_cycle += cycle;
 }
 #endif
 

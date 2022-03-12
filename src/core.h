@@ -68,7 +68,7 @@ public:
   ~core_c();
 
   void set_tracefile(std::string filename);
-  void insert_request(Addr addr, bool write);
+  void insert_request(Addr addr, bool write, Counter cycle);
   void run_a_cycle(bool pll_locked);
   void run_sim();
 
@@ -90,13 +90,11 @@ public:
 
 private:
   std::string m_tracefilename;
-  std::list<core_req_s*> m_pending_q;
+  std::list<std::pair<core_req_s*, Counter>> m_pending_q;
 
 #ifdef CXL_DEBUG
-  std::map<Addr, int> m_input_req_cnt;
-  std::map<Addr, Counter> m_input_insert_cycle;
-
   Counter m_in_flight_reqs;
+  std::map<Counter, int> m_in_flight_reqs_id;
 #endif
 };
 
